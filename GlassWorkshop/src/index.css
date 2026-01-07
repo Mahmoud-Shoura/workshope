@@ -1,111 +1,154 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 220 25% 97%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 262 83% 58%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 262 83% 58%;
-
-    --radius: 0.75rem;
-  }
-
-  .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-
-    --popover: 224 71% 4%;
-    --popover-foreground: 213 31% 91%;
-
-    --primary: 263 70% 50%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-
-    --accent: 216 34% 17%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --ring: 263 70% 50%;
-  }
+/* CSS Variables for theming */
+:root {
+  --bg-color: #f5f5f5;
+  --text-color: #333;
+  --border-color: #ddd;
+  --input-bg: #fff;
+  --button-bg: #4CAF50;
+  --button-hover: #45a049;
+  --delete-color: #f44336;
+  --header-bg: #fff;
+  --table-header-bg: #f9f9f9;
+  --row-hover: #f5f5f5;
+  --shadow: rgba(0, 0, 0, 0.1);
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  html {
-    direction: rtl;
-    font-family: 'Cairo', sans-serif;
-  }
-
-  body {
-    @apply bg-background text-foreground antialiased;
-    background: linear-gradient(135deg,
-        hsl(var(--background)) 0%,
-        hsl(220 25% 95%) 50%,
-        hsl(262 83% 98%) 100%);
-    min-height: 100vh;
-  }
-
-  body.dark {
-    background: linear-gradient(135deg,
-        hsl(var(--background)) 0%,
-        hsl(224 71% 6%) 50%,
-        hsl(263 70% 8%) 100%);
-  }
+.dark {
+  --bg-color: #1a1a1a;
+  --text-color: #e0e0e0;
+  --border-color: #444;
+  --input-bg: #2a2a2a;
+  --button-bg: #5cb85c;
+  --button-hover: #4cae4c;
+  --delete-color: #d9534f;
+  --header-bg: #2a2a2a;
+  --table-header-bg: #333;
+  --row-hover: #2a2a2a;
+  --shadow: rgba(0, 0, 0, 0.3);
 }
 
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  line-height: 1.6;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Form Elements */
+input,
+select,
+button {
+  font-family: 'Cairo', sans-serif;
+  font-size: 14px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--button-bg);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Print Styles */
 @media print {
   body * {
     visibility: hidden;
   }
 
-  .max-w-5xl,
-  .max-w-5xl * {
+  .print-area,
+  .print-area * {
     visibility: visible;
   }
 
-  .max-w-5xl {
+  .print-area {
     position: absolute;
     left: 0;
     top: 0;
@@ -119,11 +162,17 @@
     display: none !important;
   }
 
-  /* Show values for print */
   input {
     border: none !important;
     background: transparent !important;
     padding: 0 !important;
     width: auto !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
   }
 }

@@ -1,7 +1,6 @@
 import React from 'react';
-import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
-import { cn } from '../../lib/utils';
 import './GlassTypeManager.css';
 
 export function GlassTypeManager() {
@@ -32,92 +31,86 @@ export function GlassTypeManager() {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in mx-auto w-full max-w-4xl">
-            <div className="flex justify-between items-center bg-card p-4 rounded-xl shadow-sm border">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight">إدارة المخزن</h2>
+        <div className="inventory-container">
+            <div className="inventory-header">
+                <h2>إدارة المخزن</h2>
                 <button
                     onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ name: '', price: '', unit: 'm2' }); }}
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 flex items-center shadow-md transition-all"
+                    className="btn-add-type"
                 >
-                    <Plus className="w-4 h-4 ml-2" /> إضافة نوع
+                    <Plus size={16} /> إضافة نوع
                 </button>
             </div>
 
             {isAdding && (
-                <form onSubmit={handleSubmit} className="bg-card border p-6 rounded-xl shadow-md space-y-4 animate-accordion-down">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">الاسم</label>
+                <form onSubmit={handleSubmit} className="inventory-form">
+                    <div className="inventory-form-grid">
+                        <div className="form-field">
+                            <label>الاسم</label>
                             <input
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                className="w-full p-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                                 placeholder="مثال: شفاف 6 مم"
                                 autoFocus
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">السعر (ج.م)</label>
+                        <div className="form-field">
+                            <label>السعر (ج.م)</label>
                             <input
                                 type="number"
                                 value={formData.price}
                                 onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                                className="w-full p-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                                 placeholder="0.00"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-muted-foreground">الوحدة</label>
+                        <div className="form-field">
+                            <label>الوحدة</label>
                             <select
                                 value={formData.unit}
                                 onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                                className="w-full p-2 bg-background border rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
                             >
                                 <option value="m2">للمتر المربع (م²)</option>
                                 <option value="piece">بالقطعة</option>
                             </select>
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2">
+                    <div className="inventory-form-actions">
                         <button
                             type="button"
                             onClick={() => { setIsAdding(false); setEditingId(null); }}
-                            className="px-4 py-2 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                            className="btn-cancel"
                         >
                             إلغاء
                         </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 shadow-sm transition-colors"
-                        >
+                        <button type="submit" className="btn-submit">
                             {editingId ? 'تحديث' : 'حفظ'}
                         </button>
                     </div>
                 </form>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="inventory-grid">
                 {glassTypes.map((type) => (
-                    <div key={type.id} className="bg-card border rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow group">
-                        <div>
-                            <h3 className="font-bold text-lg">{type.name}</h3>
-                            <p className="text-muted-foreground mt-1 text-sm font-mono">
-                                {type.price} ج.م <span className="text-xs text-muted-foreground/70">/ {type.unit === 'm2' ? 'م²' : 'قطعة'}</span>
+                    <div key={type.id} className="inventory-card">
+                        <div className="inventory-card-content">
+                            <h3>{type.name}</h3>
+                            <p>
+                                {type.price} ج.م <span>/ {type.unit === 'm2' ? 'م²' : 'قطعة'}</span>
                             </p>
                         </div>
-                        <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="inventory-card-actions">
                             <button
                                 onClick={() => startEdit(type)}
-                                className="p-2 hover:bg-primary/10 rounded-lg text-muted-foreground hover:text-primary transition-colors"
+                                className="btn-edit"
                             >
-                                <Edit2 className="w-4 h-4" />
+                                <Edit2 size={16} />
                             </button>
                             <button
                                 onClick={() => deleteGlassType(type.id)}
-                                className="p-2 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
+                                className="btn-delete-type"
                             >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 size={16} />
                             </button>
                         </div>
                     </div>

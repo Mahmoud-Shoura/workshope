@@ -1,0 +1,141 @@
+/* Layout Component Styles */
+.layout-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.layout-sidebar {
+    width: 250px;
+    background-color: var(--header-bg);
+    border-left: 1px solid var(--border-color);
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout-sidebar-header {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.layout-sidebar-nav {
+    padding: 15px;
+    flex: 1;
+}
+
+.layout-nav-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+    text-align: right;
+}
+
+.layout-nav-item:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.layout-nav-item.active {
+    background-color: var(--button-bg);
+    color: white;
+}
+
+.layout-nav-item svg {
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+.layout-sidebar-footer {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Main Content */
+.layout-main {
+    flex: 1;
+    margin-right: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout-mobile-header {
+    display: none;
+    height: 60px;
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 15px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.layout-mobile-header button {
+    background: transparent;
+    padding: 8px;
+    color: var(--text-color);
+}
+
+.layout-mobile-header span {
+    margin-right: 15px;
+    font-weight: 600;
+}
+
+.layout-content {
+    flex: 1;
+    padding: 20px;
+}
+
+/* Mobile Overlay */
+.layout-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+}
+
+.layout-overlay.active {
+    display: block;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .layout-sidebar {
+        transform: translateX(100%);
+    }
+
+    .layout-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .layout-main {
+        margin-right: 0;
+    }
+
+    .layout-mobile-header {
+        display: flex;
+    }
+
+    .layout-content {
+        padding: 15px;
+    }
+}

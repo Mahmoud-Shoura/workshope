@@ -1,0 +1,315 @@
+/* Calculator Component Styles */
+.calculator-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Section */
+.calculator-header {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+.calculator-header input {
+    max-width: 200px;
+    padding: 8px 12px;
+}
+
+.calculator-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-save,
+.btn-print {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+.btn-save {
+    background-color: var(--button-bg);
+    color: white;
+}
+
+.btn-save:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+.btn-print {
+    background-color: #666;
+    color: white;
+}
+
+.btn-print:hover {
+    background-color: #555;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+/* Table Section */
+.calculator-table-wrapper {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+.calculator-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+}
+
+.calculator-table thead {
+    background-color: var(--table-header-bg);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.calculator-table th {
+    padding: 12px 10px;
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.calculator-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calculator-table tbody tr:hover {
+    background-color: var(--row-hover);
+}
+
+.calculator-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Table Inputs */
+.calculator-table input,
+.calculator-table select {
+    padding: 6px 8px;
+    font-size: 13px;
+}
+
+.calculator-table select {
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.calculator-table select:hover {
+    background-color: var(--button-hover);
+}
+
+/* Delete Button */
+.btn-delete {
+    background: transparent;
+    color: var(--delete-color);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete:hover:not(:disabled) {
+    background-color: rgba(244, 67, 54, 0.1);
+    transform: scale(1.1);
+}
+
+/* Footer Section */
+.calculator-footer {
+    background-color: var(--table-header-bg);
+    border-top: 2px solid var(--border-color);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.btn-add-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--button-bg);
+    color: white;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn-add-row:hover {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+.calculator-totals {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    font-size: 14px;
+}
+
+.total-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.total-label {
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.total-value {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--button-bg);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .calculator-container {
+        padding: 10px;
+    }
+
+    .calculator-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .calculator-header input {
+        max-width: 100%;
+    }
+
+    .calculator-buttons {
+        width: 100%;
+    }
+
+    .btn-save,
+    .btn-print {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Hide table on mobile, show cards instead */
+    .calculator-table {
+        display: none;
+    }
+
+    .calculator-mobile-cards {
+        display: block;
+        padding: 15px;
+    }
+
+    .calculator-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-add-row {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .calculator-totals {
+        width: 100%;
+        justify-content: space-between;
+        gap: 15px;
+    }
+}
+
+/* Desktop - hide mobile cards */
+@media (min-width: 769px) {
+    .calculator-mobile-cards {
+        display: none;
+    }
+}
+
+/* Mobile Card Styles */
+.calculator-card {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    position: relative;
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+.calculator-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.calculator-card-number {
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.calculator-card-field {
+    margin-bottom: 12px;
+}
+
+.calculator-card-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.calculator-card-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.calculator-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+}
+
+.calculator-card-area {
+    color: var(--text-color);
+}
+
+.calculator-card-cost {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--button-bg);
+}

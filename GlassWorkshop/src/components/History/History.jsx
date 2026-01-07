@@ -7,57 +7,57 @@ export function History() {
 
     if (!orders || orders.length === 0) {
         return (
-            <div className="text-center py-20 text-muted-foreground animate-fade-in">
-                <h2 className="text-xl font-medium">سجل الطلبات فارغ</h2>
-                <p className="mt-2">الحسابات المحفوظة ستظهر هنا.</p>
+            <div className="history-empty">
+                <h2>سجل الطلبات فارغ</h2>
+                <p>الحسابات المحفوظة ستظهر هنا.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-fade-in mx-auto w-full max-w-4xl">
-            <h2 className="text-2xl font-bold tracking-tight px-1">سجل الطلبات</h2>
+        <div className="history-container">
+            <h2>سجل الطلبات</h2>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto rounded-xl border bg-card text-card-foreground shadow-sm">
-                <table className="w-full text-right text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground text-xs font-bold">
+            <div className="history-table-wrapper">
+                <table className="history-table">
+                    <thead>
                         <tr>
-                            <th className="px-6 py-4">التاريخ</th>
-                            <th className="px-6 py-4">العميل</th>
-                            <th className="px-6 py-4">الأبعاد والكمية</th>
-                            <th className="px-6 py-4">النوع</th>
-                            <th className="px-6 py-4">السعر</th>
+                            <th>التاريخ</th>
+                            <th>العميل</th>
+                            <th>الأبعاد والكمية</th>
+                            <th>النوع</th>
+                            <th>السعر</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody>
                         {orders.map((order) => (
-                            <tr key={order.id} className="hover:bg-muted/50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap text-muted-foreground font-mono">
+                            <tr key={order.id}>
+                                <td className="history-date">
                                     {new Date(order.date).toLocaleDateString('ar-EG')} {new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                 </td>
-                                <td className="px-6 py-4 font-medium">
+                                <td className="history-customer">
                                     {order.customerName || '-'}
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="space-y-1">
+                                <td>
+                                    <div className="history-items">
                                         {order.items?.map((item, idx) => (
-                                            <div key={idx} className="text-xs text-muted-foreground">
-                                                {item.length}x{item.width} <span className="opacity-50">/</span> {item.qty}
+                                            <div key={idx}>
+                                                {item.length}x{item.width} / {item.qty}
                                             </div>
                                         ))}
                                     </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="space-y-1">
+                                <td>
+                                    <div className="history-items">
                                         {order.items?.map((item, idx) => (
-                                            <div key={idx} className="text-xs">
+                                            <div key={idx}>
                                                 {item.typeName}
                                             </div>
                                         ))}
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 font-bold text-primary font-mono">
+                                <td className="history-price">
                                     {order.totalCost?.toLocaleString()} ج.م
                                 </td>
                             </tr>
@@ -67,26 +67,26 @@ export function History() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
+            <div className="history-mobile-cards">
                 {orders.map((order) => (
-                    <div key={order.id} className="bg-card border rounded-xl p-4 shadow-sm flex flex-col gap-3">
-                        <div className="flex justify-between items-start border-b pb-3">
+                    <div key={order.id} className="history-card">
+                        <div className="history-card-header">
                             <div>
-                                <h3 className="font-bold">{order.customerName || 'بدون اسم'}</h3>
-                                <p className="text-xs text-muted-foreground font-mono mt-1">
+                                <h3>{order.customerName || 'بدون اسم'}</h3>
+                                <p className="history-card-date">
                                     {new Date(order.date).toLocaleDateString('ar-EG')} - {new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                 </p>
                             </div>
-                            <div className="font-bold text-primary text-lg font-mono">
+                            <div className="history-card-price">
                                 {order.totalCost?.toLocaleString()} ج.م
                             </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="history-card-items">
                             {order.items?.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm bg-muted/20 p-2 rounded-lg">
-                                    <span className="font-medium">{item.typeName}</span>
-                                    <span className="text-muted-foreground font-mono" dir="ltr">{item.length}x{item.width} ({item.qty})</span>
+                                <div key={idx} className="history-card-item">
+                                    <span>{item.typeName}</span>
+                                    <span>{item.length}x{item.width} ({item.qty})</span>
                                 </div>
                             ))}
                         </div>
