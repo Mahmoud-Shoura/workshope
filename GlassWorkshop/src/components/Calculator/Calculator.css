@@ -20,8 +20,19 @@
     box-shadow: 0 1px 3px var(--shadow);
 }
 
+.calculator-inputs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.calculator-inputs input {
+    flex: 1;
+    min-width: 180px;
+}
+
 .calculator-header input {
-    max-width: 200px;
     padding: 8px 12px;
 }
 
@@ -32,6 +43,7 @@
 }
 
 .btn-save,
+.btn-whatsapp,
 .btn-print {
     display: flex;
     align-items: center;
@@ -48,6 +60,17 @@
 
 .btn-save:hover {
     background-color: var(--button-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px var(--shadow);
+}
+
+.btn-whatsapp {
+    background-color: #25D366;
+    color: white;
+}
+
+.btn-whatsapp:hover {
+    background-color: #20BA5A;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px var(--shadow);
 }
@@ -201,8 +224,14 @@
         align-items: stretch;
     }
 
-    .calculator-header input {
-        max-width: 100%;
+    .calculator-inputs {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .calculator-inputs input {
+        width: 100%;
+        min-width: 100%;
     }
 
     .calculator-buttons {
@@ -210,6 +239,7 @@
     }
 
     .btn-save,
+    .btn-whatsapp,
     .btn-print {
         flex: 1;
         justify-content: center;

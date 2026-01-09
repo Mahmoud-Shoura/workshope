@@ -72,6 +72,8 @@ export function GlassTypeManager() {
                             >
                                 <option value="m2">للمتر المربع (م²)</option>
                                 <option value="piece">بالقطعة</option>
+                                <option value="linear_x2">متر طولي ×2</option>
+                                <option value="linear_x4">متر طولي ×4</option>
                             </select>
                         </div>
                     </div>
@@ -96,7 +98,12 @@ export function GlassTypeManager() {
                         <div className="inventory-card-content">
                             <h3>{type.name}</h3>
                             <p>
-                                {type.price} ج.م <span>/ {type.unit === 'm2' ? 'م²' : 'قطعة'}</span>
+                                {type.price} ج.م <span>/ {
+                                    type.unit === 'm2' ? 'م²' :
+                                        type.unit === 'piece' ? 'قطعة' :
+                                            type.unit === 'linear_x2' ? 'م.ط ×2' :
+                                                'م.ط ×4'
+                                }</span>
                             </p>
                         </div>
                         <div className="inventory-card-actions">

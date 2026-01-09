@@ -97,6 +97,36 @@
     font-size: 15px;
 }
 
+/* WhatsApp Buttons */
+.history-actions {
+    text-align: center;
+}
+
+.btn-whatsapp-small {
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-whatsapp-small:hover:not(:disabled) {
+    background-color: #20BA5A;
+    transform: scale(1.05);
+}
+
+.btn-whatsapp-small:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+
 /* Mobile Cards */
 .history-mobile-cards {
     display: none;
@@ -133,11 +163,43 @@
     margin: 0;
 }
 
+.history-card-header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
 .history-card-price {
     font-weight: 700;
     font-size: 16px;
     color: var(--button-bg);
 }
+
+.btn-whatsapp-card {
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-whatsapp-card:hover:not(:disabled) {
+    background-color: #20BA5A;
+    transform: scale(1.05);
+}
+
+.btn-whatsapp-card:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 
 .history-card-items {
     display: flex;

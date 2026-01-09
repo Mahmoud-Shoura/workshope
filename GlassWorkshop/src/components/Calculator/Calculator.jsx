@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash, Save, Printer } from 'lucide-react';
+import { Plus, Trash, Save, Printer, MessageCircle } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Calculator.css';
 
@@ -9,6 +9,7 @@ export function Calculator() {
         { id: Date.now(), length: '', width: '', qty: 1, typeId: glassTypes[0]?.id || '' }
     ]);
     const [customerName, setCustomerName] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // Update default type if types change and current selection is invalid
     useEffect(() => {
@@ -54,10 +55,41 @@ export function Calculator() {
         return { area: acc.area + area, cost: acc.cost + cost };
     }, { area: 0, cost: 0 });
 
+    const formatWhatsAppMessage = () => {
+        let message = `*فاتورة زجاج - ${customerName || 'عميل'}*\n\n`;
+
+        rows.forEach((row, index) => {
+            const type = glassTypes.find(t => t.id === row.typeId);
+            const { area, cost } = calculateRow(row);
+            message += `${index + 1}. *${type?.name}*\n`;
+            message += `   الأبعاد: ${row.length} × ${row.width} سم\n`;
+            message += `   الكمية: ${row.qty}\n`;
+            message += `   المساحة: ${area.toFixed(2)} م²\n`;
+            message += `   السعر: ${cost.toFixed(2)} ج.م\n\n`;
+        });
+
+        message += `━━━━━━━━━━━━━━━━\n`;
+        message += `*إجمالي المساحة:* ${totals.area.toFixed(2)} م²\n`;
+        message += `*الإجمالي:* ${totals.cost.toFixed(2)} ج.م`;
+
+        return message;
+    };
+
+    const handleSendWhatsApp = () => {
+        if (!phoneNumber) return alert('برجاء إدخال رقم الهاتف');
+
+        const message = formatWhatsAppMessage();
+        const phone = phoneNumber.replace(/[^0-9]/g, '');
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+        window.open(whatsappUrl, '_blank');
+    };
+
     const handleSave = () => {
         if (!customerName) return alert('برجاء إدخال اسم العميل');
         saveOrder({
             customerName,
+            phoneNumber,
             items: rows.map(r => ({ ...r, ...calculateRow(r), typeName: glassTypes.find(t => t.id === r.typeId)?.name })),
             totalCost: totals.cost,
             totalArea: totals.area
@@ -65,6 +97,7 @@ export function Calculator() {
         alert('تم حفظ الطلب بنجاح!');
         setRows([{ id: Date.now(), length: '', width: '', qty: 1, typeId: glassTypes[0]?.id || '' }]);
         setCustomerName('');
+        setPhoneNumber('');
     };
 
     const handlePrint = () => {
@@ -75,20 +108,33 @@ export function Calculator() {
         <div className="calculator-container print-area">
             {/* Header */}
             <div className="calculator-header">
-                <input
-                    type="text"
-                    placeholder="Customer Name"
-                    value={customerName}
-                    onChange={e => setCustomerName(e.target.value)}
-                />
+                <div className="calculator-inputs">
+                    <input
+                        type="text"
+                        placeholder="اسم العميل"
+                        value={customerName}
+                        onChange={e => setCustomerName(e.target.value)}
+                    />
+                    <input
+                        type="tel"
+                        placeholder="رقم الهاتف (واتساب)"
+                        value={phoneNumber}
+                        onChange={e => setPhoneNumber(e.target.value)}
+                        dir="ltr"
+                    />
+                </div>
                 <div className="calculator-buttons">
                     <button onClick={handleSave} className="btn-save">
                         <Save size={16} />
-                        Save
+                        حفظ
+                    </button>
+                    <button onClick={handleSendWhatsApp} className="btn-whatsapp">
+                        <MessageCircle size={16} />
+                        واتساب
                     </button>
                     <button onClick={handlePrint} className="btn-print">
                         <Printer size={16} />
-                        Print
+                        طباعة
                     </button>
                 </div>
             </div>
