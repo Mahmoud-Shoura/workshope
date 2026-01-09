@@ -39,16 +39,38 @@ export function Calculator() {
         const type = glassTypes.find(t => t.id === row.typeId);
         if (!type) return { area: 0, cost: 0 };
 
-        // Length/Width in cm -> Area in m2
-        const areaM2 = (Number(row.length) * Number(row.width)) / 10000;
-        const totalArea = areaM2 * Number(row.qty);
+        const length = Number(row.length);
+        const width = Number(row.width);
+        const qty = Number(row.qty);
 
-        const cost = type.unit === 'm2'
-            ? totalArea * type.price
-            : Number(row.qty) * type.price;
+        let area = 0;
+        let cost = 0;
 
-        return { area: totalArea, cost };
+        if (type.unit === 'm2') {
+            // المتر المربع: المساحة بالمتر المربع
+            const areaM2 = (length * width) / 10000;
+            area = areaM2 * qty;
+            cost = area * type.price;
+        } else if (type.unit === 'piece') {
+            // بالقطعة: الكمية فقط
+            const areaM2 = (length * width) / 10000;
+            area = areaM2 * qty;
+            cost = qty * type.price;
+        } else if (type.unit === 'linear_x2') {
+            // متر طولي ×2: (الطول + العرض) × 2
+            const linearMeters = ((length + width) * 2) / 100; // تحويل من سم إلى متر
+            area = linearMeters * qty;
+            cost = area * type.price;
+        } else if (type.unit === 'linear_x4') {
+            // متر طولي ×4: (الطول + العرض) × 4
+            const linearMeters = ((length + width) * 4) / 100; // تحويل من سم إلى متر
+            area = linearMeters * qty;
+            cost = area * type.price;
+        }
+
+        return { area, cost };
     };
+
 
     const totals = rows.reduce((acc, row) => {
         const { area, cost } = calculateRow(row);
@@ -61,15 +83,20 @@ export function Calculator() {
         rows.forEach((row, index) => {
             const type = glassTypes.find(t => t.id === row.typeId);
             const { area, cost } = calculateRow(row);
+            const unitLabel = type?.unit === 'm2' ? 'م²' :
+                type?.unit === 'piece' ? 'قطعة' :
+                    type?.unit === 'linear_x2' ? 'م.ط' :
+                        'م.ط';
+
             message += `${index + 1}. *${type?.name}*\n`;
             message += `   الأبعاد: ${row.length} × ${row.width} سم\n`;
             message += `   الكمية: ${row.qty}\n`;
-            message += `   المساحة: ${area.toFixed(2)} م²\n`;
+            message += `   ${type?.unit === 'piece' ? 'المساحة' : 'الطول'}: ${area.toFixed(2)} ${unitLabel}\n`;
             message += `   السعر: ${cost.toFixed(2)} ج.م\n\n`;
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*إجمالي المساحة:* ${totals.area.toFixed(2)} م²\n`;
+        message += `*الإجمالي الكلي:* ${totals.area.toFixed(2)}\n`;
         message += `*الإجمالي:* ${totals.cost.toFixed(2)} ج.م`;
 
         return message;
