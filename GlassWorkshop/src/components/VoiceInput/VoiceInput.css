@@ -1,0 +1,156 @@
+.voice-input-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.voice-input-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 50%;
+    background: var(--card-bg, white);
+    color: var(--text-primary, #374151);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    overflow: visible;
+}
+
+.voice-input-button:hover {
+    background: var(--hover-bg, #f3f4f6);
+    border-color: var(--primary-color, #3b82f6);
+    transform: scale(1.05);
+}
+
+.voice-input-button:active {
+    transform: scale(0.95);
+}
+
+.voice-input-button.listening {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #dc2626;
+    color: white;
+    animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+.voice-input-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.4);
+    animation: pulse-wave 1.5s ease-out infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes pulse-wave {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+    }
+}
+
+.voice-input-error {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.2s ease-in;
+}
+
+.voice-input-tooltip {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    background: var(--tooltip-bg, #1f2937);
+    color: white;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+}
+
+.voice-input-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--tooltip-bg, #1f2937);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .voice-input-button {
+        --border-color: #374151;
+        --card-bg: #1f2937;
+        --text-primary: #f3f4f6;
+        --hover-bg: #374151;
+        --primary-color: #60a5fa;
+    }
+    
+    .voice-input-error {
+        background: #7f1d1d;
+        color: #fecaca;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .voice-input-button {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .voice-input-tooltip {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+}

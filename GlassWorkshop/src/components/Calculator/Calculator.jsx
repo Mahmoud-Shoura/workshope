@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash, Save, Printer, MessageCircle } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
+import { VoiceInput } from '../VoiceInput/VoiceInput';
 import './Calculator.css';
 
 export function Calculator() {
@@ -131,6 +132,12 @@ export function Calculator() {
         window.print();
     };
 
+    const handleVoiceInput = (rowId, measurements) => {
+        updateRow(rowId, 'length', measurements.length.toString());
+        updateRow(rowId, 'width', measurements.width.toString());
+        updateRow(rowId, 'qty', measurements.qty.toString());
+    };
+
     return (
         <div className="calculator-container print-area">
             {/* Header */}
@@ -178,6 +185,7 @@ export function Calculator() {
                             <th>Qty</th>
                             <th>Area (m²)</th>
                             <th>Cost (EGP)</th>
+                            <th>Voice</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -222,6 +230,12 @@ export function Calculator() {
                                     </td>
                                     <td>{area.toFixed(2)}</td>
                                     <td>{cost.toFixed(2)}</td>
+                                    <td>
+                                        <VoiceInput
+                                            rowId={row.id}
+                                            onMeasurementsDetected={(measurements) => handleVoiceInput(row.id, measurements)}
+                                        />
+                                    </td>
                                     <td>
                                         <button
                                             onClick={() => deleteRow(row.id)}
@@ -294,6 +308,14 @@ export function Calculator() {
                                             min="1"
                                         />
                                     </div>
+                                </div>
+
+                                <div className="calculator-card-voice">
+                                    <VoiceInput
+                                        rowId={row.id}
+                                        onMeasurementsDetected={(measurements) => handleVoiceInput(row.id, measurements)}
+                                    />
+                                    <span className="voice-hint">أو اضغط للإدخال الصوتي</span>
                                 </div>
 
                                 <div className="calculator-card-footer">

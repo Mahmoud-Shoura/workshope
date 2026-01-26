@@ -343,3 +343,19 @@
     font-size: 15px;
     color: var(--button-bg);
 }
+
+.calculator-card-voice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    margin-bottom: 12px;
+}
+
+.voice-hint {
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.6;
+    text-align: center;
+}
