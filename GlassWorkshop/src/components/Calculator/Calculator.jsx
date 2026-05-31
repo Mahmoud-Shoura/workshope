@@ -223,7 +223,7 @@ export function Calculator() {
 
             {/* Groups Wrapper */}
             <div className="calculator-groups-wrapper no-print">
-                {groups.map((group, groupIdx) => {
+                {adjustedGroups.map((group, groupIdx) => {
                     const parsedRows = parseMeasurementsText(group.inputText);
                     
                     const groupSubtotal = parsedRows.reduce((acc, r) => {
