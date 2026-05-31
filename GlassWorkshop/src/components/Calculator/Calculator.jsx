@@ -1,48 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash, Save, Printer, MessageCircle } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
-import { VoiceInput } from '../VoiceInput/VoiceInput';
 import './Calculator.css';
 
 export function Calculator() {
     const { glassTypes, saveOrder } = useGlassStore();
-    const [rows, setRows] = useState([
-        { id: Date.now(), length: '', width: '', qty: 1, typeId: glassTypes[0]?.id || '' }
+    const [groups, setGroups] = useState([
+        { id: 1, typeId: glassTypes[0]?.id || '', inputText: '' }
     ]);
     const [customerName, setCustomerName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [showPrintSheet, setShowPrintSheet] = useState(false);
 
-    // Update default type if types change and current selection is invalid
-    useEffect(() => {
-        setRows(prevRows => prevRows.map(row => {
-            if (!glassTypes.find(t => t.id === row.typeId) && glassTypes.length > 0) {
-                return { ...row, typeId: glassTypes[0].id };
-            }
-            return row;
-        }));
-    }, [glassTypes]);
+    // Compute groups with fallback typeIds if they are deleted from inventory
+    const adjustedGroups = groups.map(group => {
+        if (!glassTypes.find(t => t.id === group.typeId) && glassTypes.length > 0) {
+            return { ...group, typeId: glassTypes[0].id };
+        }
+        return group;
+    });
 
-    const addRow = () => {
-        setRows([...rows, { id: Date.now(), length: '', width: '', qty: 1, typeId: glassTypes[0]?.id || '' }]);
+    const addGroup = () => {
+        setGroups([...groups, { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
     };
 
-    const updateRow = (id, field, value) => {
-        setRows(rows.map(row => row.id === id ? { ...row, [field]: value } : row));
+    const updateGroup = (id, field, value) => {
+        setGroups(groups.map(group => group.id === id ? { ...group, [field]: value } : group));
     };
 
-    const deleteRow = (id) => {
-        if (rows.length > 1) {
-            setRows(rows.filter(row => row.id !== id));
+    const deleteGroup = (id) => {
+        if (groups.length > 1) {
+            setGroups(groups.filter(group => group.id !== id));
         }
     };
 
-    const calculateRow = (row) => {
-        const type = glassTypes.find(t => t.id === row.typeId);
-        if (!type) return { area: 0, cost: 0 };
+    const parseMeasurementsText = (text) => {
+        if (!text) return [];
+        // Split by newline, comma, semicolon, or plus
+        const lines = text.split(/[\n,;+]+/);
+        const parsed = [];
 
-        const length = Number(row.length);
-        const width = Number(row.width);
-        const qty = Number(row.qty);
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            // Find all numeric values (including decimals) in the line
+            const numbers = trimmed.match(/\d+(\.\d+)?/g);
+            if (numbers && numbers.length >= 2) {
+                const length = parseFloat(numbers[0]);
+                const width = parseFloat(numbers[1]);
+                const qty = numbers[2] ? parseInt(numbers[2], 10) : 1;
+                parsed.push({
+                    id: `${Date.now()}-${index}-${Math.random()}`,
+                    raw: trimmed,
+                    length,
+                    width,
+                    qty: isNaN(qty) || qty <= 0 ? 1 : qty,
+                    isValid: true
+                });
+            } else {
+                parsed.push({
+                    id: `${Date.now()}-${index}-${Math.random()}`,
+                    raw: trimmed,
+                    length: 0,
+                    width: 0,
+                    qty: 0,
+                    isValid: false
+                });
+            }
+        });
+        return parsed;
+    };
+
+    const calculateRow = (length, width, qty, typeId) => {
+        const type = glassTypes.find(t => t.id === typeId);
+        if (!type) return { area: 0, cost: 0 };
 
         let area = 0;
         let cost = 0;
@@ -72,32 +104,55 @@ export function Calculator() {
         return { area, cost };
     };
 
+    // Flatten all valid items from all groups for global actions
+    const getActiveItems = () => {
+        const allItems = [];
+        adjustedGroups.forEach(group => {
+            const parsed = parseMeasurementsText(group.inputText);
+            parsed.forEach(item => {
+                if (item.isValid) {
+                    const { area, cost } = calculateRow(item.length, item.width, item.qty, group.typeId);
+                    allItems.push({
+                        id: item.id,
+                        length: item.length,
+                        width: item.width,
+                        qty: item.qty,
+                        typeId: group.typeId,
+                        typeName: glassTypes.find(t => t.id === group.typeId)?.name || '',
+                        area,
+                        cost
+                    });
+                }
+            });
+        });
+        return allItems;
+    };
 
-    const totals = rows.reduce((acc, row) => {
-        const { area, cost } = calculateRow(row);
-        return { area: acc.area + area, cost: acc.cost + cost };
+    const activeItems = getActiveItems();
+
+    const totals = activeItems.reduce((acc, item) => {
+        return { area: acc.area + item.area, cost: acc.cost + item.cost };
     }, { area: 0, cost: 0 });
 
     const formatWhatsAppMessage = () => {
         let message = `*فاتورة زجاج - ${customerName || 'عميل'}*\n\n`;
 
-        rows.forEach((row, index) => {
-            const type = glassTypes.find(t => t.id === row.typeId);
-            const { area, cost } = calculateRow(row);
+        activeItems.forEach((item, index) => {
+            const type = glassTypes.find(t => t.id === item.typeId);
             const unitLabel = type?.unit === 'm2' ? 'م²' :
                 type?.unit === 'piece' ? 'قطعة' :
                     type?.unit === 'linear_x2' ? 'م.ط' :
                         'م.ط';
 
-            message += `${index + 1}. *${type?.name}*\n`;
-            message += `   الأبعاد: ${row.length} × ${row.width} سم\n`;
-            message += `   الكمية: ${row.qty}\n`;
-            message += `   ${type?.unit === 'piece' ? 'المساحة' : 'الطول'}: ${area.toFixed(2)} ${unitLabel}\n`;
-            message += `   السعر: ${cost.toFixed(2)} ج.م\n\n`;
+            message += `${index + 1}. *${item.typeName}*\n`;
+            message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
+            message += `   الكمية: ${item.qty}\n`;
+            message += `   ${type?.unit === 'piece' ? 'المساحة' : 'الطول'}: ${item.area.toFixed(2)} ${unitLabel}\n`;
+            message += `   السعر: ${item.cost.toFixed(2)} ج.م\n\n`;
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*الإجمالي الكلي:* ${totals.area.toFixed(2)}\n`;
+        message += `*الإجمالي الكلي:* ${totals.area.toFixed(2)} م²\n`;
         message += `*الإجمالي:* ${totals.cost.toFixed(2)} ج.م`;
 
         return message;
@@ -105,6 +160,7 @@ export function Calculator() {
 
     const handleSendWhatsApp = () => {
         if (!phoneNumber) return alert('برجاء إدخال رقم الهاتف');
+        if (activeItems.length === 0) return alert('برجاء إدخال مقاسات صحيحة أولاً');
 
         const message = formatWhatsAppMessage();
         const phone = phoneNumber.replace(/[^0-9]/g, '');
@@ -115,33 +171,25 @@ export function Calculator() {
 
     const handleSave = () => {
         if (!customerName) return alert('برجاء إدخال اسم العميل');
+        if (activeItems.length === 0) return alert('برجاء إدخال مقاسات صحيحة أولاً');
+
         saveOrder({
             customerName,
             phoneNumber,
-            items: rows.map(r => ({ ...r, ...calculateRow(r), typeName: glassTypes.find(t => t.id === r.typeId)?.name })),
+            items: activeItems,
             totalCost: totals.cost,
             totalArea: totals.area
         });
         alert('تم حفظ الطلب بنجاح!');
-        setRows([{ id: Date.now(), length: '', width: '', qty: 1, typeId: glassTypes[0]?.id || '' }]);
+        setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
         setCustomerName('');
         setPhoneNumber('');
     };
 
-    const handlePrint = () => {
-        window.print();
-    };
-
-    const handleVoiceInput = (rowId, measurements) => {
-        updateRow(rowId, 'length', measurements.length.toString());
-        updateRow(rowId, 'width', measurements.width.toString());
-        updateRow(rowId, 'qty', measurements.qty.toString());
-    };
-
     return (
-        <div className="calculator-container print-area">
+        <div className="calculator-container">
             {/* Header */}
-            <div className="calculator-header">
+            <div className="calculator-header no-print">
                 <div className="calculator-inputs">
                     <input
                         type="text"
@@ -158,192 +206,256 @@ export function Calculator() {
                     />
                 </div>
                 <div className="calculator-buttons">
-                    <button onClick={handleSave} className="btn-save">
+                    <button onClick={handleSave} className="btn-save" disabled={activeItems.length === 0}>
                         <Save size={16} />
                         حفظ
                     </button>
-                    <button onClick={handleSendWhatsApp} className="btn-whatsapp">
+                    <button onClick={handleSendWhatsApp} className="btn-whatsapp" disabled={activeItems.length === 0}>
                         <MessageCircle size={16} />
                         واتساب
                     </button>
-                    <button onClick={handlePrint} className="btn-print">
+                    <button onClick={() => setShowPrintSheet(true)} className="btn-print" disabled={activeItems.length === 0}>
                         <Printer size={16} />
-                        طباعة
+                        كشف الطباعة
                     </button>
                 </div>
             </div>
 
-            {/* Table Wrapper */}
-            <div className="calculator-table-wrapper">
-                {/* Desktop Table View */}
-                <table className="calculator-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>L (cm)</th>
-                            <th>W (cm)</th>
-                            <th>Qty</th>
-                            <th>Area (m²)</th>
-                            <th>Cost (EGP)</th>
-                            <th>Voice</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((row) => {
-                            const { area, cost } = calculateRow(row);
-                            return (
-                                <tr key={row.id}>
-                                    <td>
-                                        <select
-                                            value={row.typeId}
-                                            onChange={(e) => updateRow(row.id, 'typeId', e.target.value)}
-                                        >
-                                            {glassTypes.map(t => (
-                                                <option key={t.id} value={t.id}>{t.name} ({t.price})</option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={row.length}
-                                            onChange={(e) => updateRow(row.id, 'length', e.target.value)}
-                                            placeholder="0"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={row.width}
-                                            onChange={(e) => updateRow(row.id, 'width', e.target.value)}
-                                            placeholder="0"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            value={row.qty}
-                                            onChange={(e) => updateRow(row.id, 'qty', e.target.value)}
-                                            min="1"
-                                        />
-                                    </td>
-                                    <td>{area.toFixed(2)}</td>
-                                    <td>{cost.toFixed(2)}</td>
-                                    <td>
-                                        <VoiceInput
-                                            rowId={row.id}
-                                            onMeasurementsDetected={(measurements) => handleVoiceInput(row.id, measurements)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <button
-                                            onClick={() => deleteRow(row.id)}
-                                            className="btn-delete"
-                                            disabled={rows.length === 1}
-                                        >
-                                            <Trash size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+            {/* Groups Wrapper */}
+            <div className="calculator-groups-wrapper no-print">
+                {groups.map((group, groupIdx) => {
+                    const parsedRows = parseMeasurementsText(group.inputText);
+                    
+                    const groupSubtotal = parsedRows.reduce((acc, r) => {
+                        if (!r.isValid) return acc;
+                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId);
+                        return { area: acc.area + area, cost: acc.cost + cost };
+                    }, { area: 0, cost: 0 });
 
-                {/* Mobile Card View */}
-                <div className="calculator-mobile-cards">
-                    {rows.map((row, index) => {
-                        const { area, cost } = calculateRow(row);
-                        return (
-                            <div key={row.id} className="calculator-card">
-                                <div className="calculator-card-header">
-                                    <span className="calculator-card-number">#{index + 1}</span>
-                                    <button
-                                        onClick={() => deleteRow(row.id)}
-                                        className="btn-delete"
-                                        disabled={rows.length === 1}
-                                    >
-                                        <Trash size={16} />
-                                    </button>
-                                </div>
-
-                                <div className="calculator-card-field">
-                                    <label className="calculator-card-label">النوع</label>
+                    return (
+                        <div key={group.id} className="calculator-group-card">
+                            <div className="calculator-group-header">
+                                <div className="group-title-select">
+                                    <span className="group-number">المجموعة #{groupIdx + 1}</span>
                                     <select
-                                        value={row.typeId}
-                                        onChange={(e) => updateRow(row.id, 'typeId', e.target.value)}
+                                        value={group.typeId}
+                                        onChange={(e) => updateGroup(group.id, 'typeId', e.target.value)}
+                                        className="group-type-select"
                                     >
                                         {glassTypes.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name} ({t.price})</option>
+                                            <option key={t.id} value={t.id}>{t.name} ({t.price} ج.م / {t.unit === 'm2' ? 'م²' : 'قطعة'})</option>
                                         ))}
                                     </select>
                                 </div>
+                                <button
+                                    onClick={() => deleteGroup(group.id)}
+                                    className="btn-delete-group"
+                                    disabled={groups.length === 1}
+                                    title="حذف المجموعة"
+                                >
+                                    <Trash size={18} />
+                                </button>
+                            </div>
 
-                                <div className="calculator-card-inputs">
-                                    <div className="calculator-card-field">
-                                        <label className="calculator-card-label">الطول</label>
-                                        <input
-                                            type="number"
-                                            value={row.length}
-                                            onChange={(e) => updateRow(row.id, 'length', e.target.value)}
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="calculator-card-field">
-                                        <label className="calculator-card-label">العرض</label>
-                                        <input
-                                            type="number"
-                                            value={row.width}
-                                            onChange={(e) => updateRow(row.id, 'width', e.target.value)}
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="calculator-card-field">
-                                        <label className="calculator-card-label">العدد</label>
-                                        <input
-                                            type="number"
-                                            value={row.qty}
-                                            onChange={(e) => updateRow(row.id, 'qty', e.target.value)}
-                                            min="1"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="calculator-card-voice">
-                                    <VoiceInput
-                                        rowId={row.id}
-                                        onMeasurementsDetected={(measurements) => handleVoiceInput(row.id, measurements)}
+                            <div className="calculator-group-body">
+                                <div className="group-input-section">
+                                    <label className="group-input-label">أدخل المقاسات:</label>
+                                    <textarea
+                                        value={group.inputText}
+                                        onChange={(e) => updateGroup(group.id, 'inputText', e.target.value)}
+                                        placeholder="مثال للتنسيق:&#10;120*80*2 (طول*عرض*عدد)&#10;100*90*1&#10;150x60 (يفترض العدد 1)"
+                                        className="group-textarea"
+                                        rows={5}
                                     />
-                                    <span className="voice-hint">أو اضغط للإدخال الصوتي</span>
+                                    <span className="group-input-hint">
+                                        اكتب المقاسات بالتنسيق: الطول * العرض * العدد (مثال: 120*80*2 أو 120x80x3) وافصل بينها بسطر جديد.
+                                    </span>
                                 </div>
 
-                                <div className="calculator-card-footer">
-                                    <span className="calculator-card-area">المساحة: {area.toFixed(2)} م²</span>
-                                    <span className="calculator-card-cost">{cost.toFixed(2)} ج.م</span>
+                                <div className="group-preview-section">
+                                    <label className="group-input-label">كشف الحساب للمجموعة:</label>
+                                    {parsedRows.length === 0 ? (
+                                        <div className="preview-empty">
+                                            لا توجد مقاسات صحيحة مدخلة بعد.
+                                        </div>
+                                    ) : (
+                                        <div className="preview-table-wrapper">
+                                            <table className="preview-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>المقاس (سم)</th>
+                                                        <th>العدد</th>
+                                                        <th>المساحة</th>
+                                                        <th>السعر (ج.م)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {parsedRows.map((r, rIdx) => {
+                                                        if (!r.isValid) {
+                                                            return (
+                                                                <tr key={r.id} className="preview-row-invalid">
+                                                                    <td>{rIdx + 1}</td>
+                                                                    <td colSpan={4} className="error-text">
+                                                                        تنسيق غير مدعوم: "{r.raw}"
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        }
+                                                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId);
+                                                        return (
+                                                            <tr key={r.id} className="preview-row-valid">
+                                                                <td>{rIdx + 1}</td>
+                                                                <td>{r.length} × {r.width}</td>
+                                                                <td>{r.qty}</td>
+                                                                <td>{area.toFixed(2)}</td>
+                                                                <td>{cost.toFixed(2)}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
 
-                {/* Footer */}
-                <div className="calculator-footer">
-                    <button onClick={addRow} className="btn-add-row">
-                        <Plus size={16} />
-                        Add Row
-                    </button>
+                            <div className="calculator-group-footer">
+                                <div className="group-subtotals">
+                                    <span className="subtotal-item">
+                                        المساحة: <strong>{groupSubtotal.area.toFixed(2)} م²</strong>
+                                    </span>
+                                    <span className="subtotal-item">
+                                        السعر: <strong>{groupSubtotal.cost.toFixed(2)} ج.م</strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
 
-                    <div className="calculator-totals">
-                        <div className="total-item">
-                            <span className="total-label">{totals.area.toFixed(2)} m²</span>
-                        </div>
-                        <div className="total-item">
-                            <span className="total-value">{totals.cost.toFixed(2)} EGP</span>
-                        </div>
+            {/* Bottom Actions */}
+            <div className="calculator-footer no-print">
+                <button onClick={addGroup} className="btn-add-row">
+                    <Plus size={16} />
+                    إضافة مجموعة زجاج
+                </button>
+
+                <div className="calculator-totals">
+                    <div className="total-item">
+                        <span className="total-label">إجمالي المساحة:</span>
+                        <span className="total-value">{totals.area.toFixed(2)} م²</span>
+                    </div>
+                    <div className="total-item">
+                        <span className="total-label">إجمالي السعر:</span>
+                        <span className="total-value">{totals.cost.toFixed(2)} ج.م</span>
                     </div>
                 </div>
             </div>
+
+            {/* Printable Sheet Overlay Modal */}
+            {showPrintSheet && (
+                <div className="printable-sheet-overlay">
+                    <div className="printable-sheet-modal print-area">
+                        <div className="sheet-header no-print">
+                            <h3>شيت معاينة كشف المقاسات والطباعة</h3>
+                            <div className="sheet-header-buttons">
+                                <button onClick={() => window.print()} className="btn-print-modal">
+                                    <Printer size={16} />
+                                    طباعة الكشف
+                                </button>
+                                <button onClick={() => setShowPrintSheet(false)} className="btn-close-modal">
+                                    إغلاق
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="sheet-content">
+                            <div className="sheet-print-title">
+                                <h2>ورشة الزجاج الحديثة</h2>
+                                <p>كشف تفصيلي بمقاسات وحسابات زجاج للعميل</p>
+                            </div>
+
+                            <div className="sheet-info-grid">
+                                <div>
+                                    <strong>اسم العميل:</strong> {customerName || 'عميل نقدي'}
+                                </div>
+                                <div>
+                                    <strong>رقم الهاتف:</strong> {phoneNumber || '-'}
+                                </div>
+                                <div>
+                                    <strong>التاريخ:</strong> {new Date().toLocaleDateString('ar-EG')}
+                                </div>
+                            </div>
+
+                            {/* Desktop Wide Landscape Sheet (Excel style) */}
+                            <div className="sheet-table-wrapper">
+                                <table className="sheet-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>نوع الزجاج (الصنف)</th>
+                                            <th>الطول (سم)</th>
+                                            <th>العرض (سم)</th>
+                                            <th>العدد</th>
+                                            <th>المساحة (م² / طولي)</th>
+                                            <th>السعر (ج.م)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {activeItems.map((item, idx) => (
+                                            <tr key={item.id}>
+                                                <td>{idx + 1}</td>
+                                                <td>{item.typeName}</td>
+                                                <td>{item.length}</td>
+                                                <td>{item.width}</td>
+                                                <td>{item.qty}</td>
+                                                <td>{item.area.toFixed(2)}</td>
+                                                <td>{item.cost.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Portrait Sheet (List/Card style) */}
+                            <div className="sheet-mobile-list no-print">
+                                {activeItems.map((item, idx) => (
+                                    <div key={item.id} className="sheet-mobile-item">
+                                        <div className="item-header">
+                                            <span className="item-index">#{idx + 1}</span>
+                                            <span className="item-type">{item.typeName}</span>
+                                        </div>
+                                        <div className="item-details">
+                                            <div><span>الطول:</span> <span>{item.length} سم</span></div>
+                                            <div><span>العرض:</span> <span>{item.width} سم</span></div>
+                                            <div><span>العدد:</span> <span>{item.qty}</span></div>
+                                            <div><span>المساحة:</span> <span>{item.area.toFixed(2)} م²</span></div>
+                                            <div><span>السعر:</span> <span>{item.cost.toFixed(2)} ج.م</span></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="sheet-totals">
+                                <div className="totals-row">
+                                    <span>إجمالي المساحة الكلية:</span>
+                                    <strong>{totals.area.toFixed(2)} م²</strong>
+                                </div>
+                                <div className="totals-row total-price-row">
+                                    <span>الحساب الإجمالي المطلوب:</span>
+                                    <strong>{totals.cost.toFixed(2)} ج.م</strong>
+                                </div>
+                            </div>
+
+                            <div className="sheet-footer-note">
+                                <p>نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

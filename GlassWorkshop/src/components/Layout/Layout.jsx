@@ -1,13 +1,11 @@
 import React from 'react';
-import { LayoutDashboard, Calculator, Settings, Menu, History, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut } from 'lucide-react';
 import { useTheme } from '../ThemeProvider/ThemeProvider';
 import './Layout.css';
 
-export function Layout({ children, currentView, onViewChange }) {
-    const [isSidebarOpen, setSidebarOpen] = React.useState(false);
-    const { theme, toggleTheme } = useTheme();
-
-    const NavItem = ({ view, icon: Icon, label }) => (
+// Declare NavItem as a static helper component outside of Layout to comply with react-hooks/static-components
+function NavItem({ view, icon: Icon, label, currentView, onViewChange, setSidebarOpen }) {
+    return (
         <button
             onClick={() => {
                 onViewChange(view);
@@ -19,6 +17,36 @@ export function Layout({ children, currentView, onViewChange }) {
             {label}
         </button>
     );
+}
+
+export function Layout({ children, currentView, onViewChange }) {
+    const [isSidebarOpen, setSidebarOpen] = React.useState(false);
+    const { theme, toggleTheme } = useTheme();
+    const [exitConfirmCount, setExitConfirmCount] = React.useState(0);
+    const [showExitToast, setShowExitToast] = React.useState(false);
+
+    React.useEffect(() => {
+        if (exitConfirmCount > 0) {
+            const timer = setTimeout(() => {
+                setExitConfirmCount(0);
+                setShowExitToast(false);
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [exitConfirmCount]);
+
+    const handleExit = () => {
+        if (exitConfirmCount === 0) {
+            setExitConfirmCount(1);
+            setShowExitToast(true);
+        } else {
+            setShowExitToast(false);
+            window.close();
+            setTimeout(() => {
+                window.location.href = 'about:blank';
+            }, 100);
+        }
+    };
 
     return (
         <div className="layout-container">
@@ -34,9 +62,37 @@ export function Layout({ children, currentView, onViewChange }) {
                     ورشة الزجاج
                 </div>
                 <div className="layout-sidebar-nav">
-                    <NavItem view="calculator" icon={Calculator} label="الحاسبة" />
-                    <NavItem view="inventory" icon={LayoutDashboard} label="المخزن" />
-                    <NavItem view="history" icon={History} label="السجل" />
+                    <NavItem 
+                        view="calculator" 
+                        icon={Calculator} 
+                        label="الحاسبة" 
+                        currentView={currentView} 
+                        onViewChange={onViewChange} 
+                        setSidebarOpen={setSidebarOpen} 
+                    />
+                    <NavItem 
+                        view="inventory" 
+                        icon={LayoutDashboard} 
+                        label="المخزن" 
+                        currentView={currentView} 
+                        onViewChange={onViewChange} 
+                        setSidebarOpen={setSidebarOpen} 
+                    />
+                    <NavItem 
+                        view="history" 
+                        icon={History} 
+                        label="السجل" 
+                        currentView={currentView} 
+                        onViewChange={onViewChange} 
+                        setSidebarOpen={setSidebarOpen} 
+                    />
+                    <button
+                        onClick={handleExit}
+                        className={`layout-nav-item exit-btn ${exitConfirmCount > 0 ? 'confirming' : ''}`}
+                    >
+                        <LogOut size={20} />
+                        خروج
+                    </button>
                 </div>
 
                 <div className="layout-sidebar-footer">
@@ -76,6 +132,13 @@ export function Layout({ children, currentView, onViewChange }) {
                     {children}
                 </div>
             </main>
+
+            {/* Exit confirmation toast */}
+            {showExitToast && (
+                <div className="layout-exit-toast">
+                    اضغط مرة أخرى للخروج من الموقع
+                </div>
+            )}
         </div>
     );
 }
