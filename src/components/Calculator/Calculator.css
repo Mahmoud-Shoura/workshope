@@ -507,6 +507,122 @@
     display: none;
 }
 
+/* Custom Adjustments Section in Calculator */
+.calculator-adjustments-container {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.adjustments-section-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.adjustments-buttons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.btn-adjustment {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    transition: all 0.2s ease;
+}
+
+.btn-adjustment:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px var(--shadow);
+}
+
+.btn-adjustment.discount:hover {
+    border-color: var(--delete-color);
+    color: var(--delete-color);
+    background-color: rgba(244, 67, 54, 0.02);
+}
+
+.btn-adjustment.fee:hover {
+    border-color: var(--button-bg);
+    color: var(--button-bg);
+    background-color: rgba(76, 175, 80, 0.02);
+}
+
+/* Active Adjustment states */
+.btn-adjustment.discount.active {
+    background-color: var(--delete-color);
+    border-color: var(--delete-color);
+    color: white;
+}
+
+.btn-adjustment.fee.active {
+    background-color: var(--button-bg);
+    border-color: var(--button-bg);
+    color: white;
+}
+
+.btn-adjustment.discount.active:hover {
+    background-color: #e53935;
+}
+
+.btn-adjustment.fee.active:hover {
+    background-color: #43a047;
+}
+
+.adjustment-name {
+    margin-left: 2px;
+}
+
+.adjustment-value {
+    opacity: 0.8;
+    font-size: 11px;
+}
+
+/* Totals tweaks */
+.total-value-small {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-color);
+}
+
+.base-cost-item {
+    border-right: 1px solid var(--border-color);
+    padding-right: 15px;
+}
+
+.final-cost-item {
+    border-right: 1px solid var(--border-color);
+    padding-right: 15px;
+}
+
+.final-cost-item .total-value {
+    color: var(--button-bg);
+    font-size: 20px;
+    font-weight: 800;
+}
+
+/* Sheet styles */
+.sheet-adjustment-row {
+    color: #555;
+    font-size: 13px;
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
     .calculator-container {
@@ -566,8 +682,29 @@
 
     .calculator-totals {
         width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        border-top: 1px solid var(--border-color);
+        padding-top: 15px;
+        margin-top: 10px;
+    }
+    
+    .base-cost-item, 
+    .final-cost-item {
+        border-right: none;
+        padding-right: 0;
+        border-top: 1px dashed var(--border-color);
+        padding-top: 10px;
+        margin-top: 5px;
+    }
+    
+    .total-item {
+        width: 100%;
+        display: flex;
         justify-content: space-between;
-        gap: 15px;
+        align-items: center;
     }
 
     /* Mobile Sheet Styling - On screen displays vertical cards */

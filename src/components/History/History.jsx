@@ -18,9 +18,27 @@ export function History() {
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*إجمالي المساحة:* ${order.totalArea?.toFixed(2)} م²\n`;
-        message += `*الإجمالي:* ${order.totalCost?.toFixed(2)} ج.م\n\n`;
-        message += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_`;
+        message += `*المساحة الكلية:* ${order.totalArea?.toFixed(2)} م²\n`;
+
+        if (order.baseCost !== undefined) {
+            message += `*إجمالي سعر الزجاج:* ${order.baseCost.toFixed(2)} ج.م\n`;
+        } else {
+            const computedBase = order.items?.reduce((sum, item) => sum + item.cost, 0) || order.totalCost || 0;
+            message += `*إجمالي سعر الزجاج:* ${computedBase.toFixed(2)} ج.م\n`;
+        }
+
+        if (order.adjustments && order.adjustments.length > 0) {
+            message += `--- الرسوم والخصومات ---\n`;
+            order.adjustments.forEach(adj => {
+                const prefix = adj.amount >= 0 ? '+' : '';
+                message += `${adj.name}: ${prefix}${adj.amount.toFixed(2)} ج.م\n`;
+            });
+            message += `━━━━━━━━━━━━━━━━\n`;
+        }
+
+        message += `*الإجمالي المطلوب:* ${order.totalCost?.toFixed(2)} ج.م\n\n`;
+        message += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
+        message += `_شكراً لتعاملكم معنا ورشة الزجاج الحديثة_`;
 
         return message;
     };
@@ -91,8 +109,20 @@ export function History() {
                                         ))}
                                     </div>
                                 </td>
-                                <td className="history-price">
-                                    {order.totalCost?.toLocaleString()} ج.م
+                                <td>
+                                    <div className="price-breakdown">
+                                        <div className="final-price">{order.totalCost?.toLocaleString()} ج.م</div>
+                                        {order.adjustments && order.adjustments.length > 0 && (
+                                            <div className="adjustments-tooltip">
+                                                <span>الزجاج: {order.baseCost?.toLocaleString()} ج.م</span>
+                                                {order.adjustments.map((adj, idx) => (
+                                                    <span key={idx}>
+                                                        {adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="history-actions">
                                     <button
@@ -143,6 +173,18 @@ export function History() {
                                     <span>{item.length}x{item.width} ({item.qty})</span>
                                 </div>
                             ))}
+                            
+                            {order.adjustments && order.adjustments.length > 0 && (
+                                <div className="history-card-adjustments">
+                                    <div className="card-adj-header">الإضافات والخصومات:</div>
+                                    {order.adjustments.map((adj, idx) => (
+                                        <div key={idx} className="history-card-item adj-row">
+                                            <span>{adj.name}</span>
+                                            <span>{adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

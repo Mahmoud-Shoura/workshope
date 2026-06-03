@@ -4,13 +4,14 @@ import { useGlassStore } from '../../hooks/useGlassStore';
 import './Calculator.css';
 
 export function Calculator() {
-    const { glassTypes, saveOrder } = useGlassStore();
+    const { glassTypes, customButtons, saveOrder } = useGlassStore();
     const [groups, setGroups] = useState([
         { id: 1, typeId: glassTypes[0]?.id || '', inputText: '' }
     ]);
     const [customerName, setCustomerName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [showPrintSheet, setShowPrintSheet] = useState(false);
+    const [activeButtons, setActiveButtons] = useState([]);
 
     // Compute groups with fallback typeIds if they are deleted from inventory
     const adjustedGroups = groups.map(group => {
@@ -134,6 +135,37 @@ export function Calculator() {
         return { area: acc.area + item.area, cost: acc.cost + item.cost };
     }, { area: 0, cost: 0 });
 
+    const baseCost = totals.cost;
+
+    // Calculate details of adjustments applied
+    const getAdjustments = (subtotal) => {
+        if (!customButtons) return [];
+        return customButtons
+            .filter(btn => activeButtons.includes(btn.id))
+            .map(btn => {
+                let amount = 0;
+                if (btn.type === 'discount_percent') {
+                    amount = - (subtotal * btn.value / 100);
+                } else if (btn.type === 'discount_fixed') {
+                    amount = - btn.value;
+                } else if (btn.type === 'fee_percent') {
+                    amount = (subtotal * btn.value / 100);
+                } else if (btn.type === 'fee_fixed') {
+                    amount = btn.value;
+                }
+                return {
+                    id: btn.id,
+                    name: btn.name,
+                    type: btn.type,
+                    value: btn.value,
+                    amount: Math.round(amount * 100) / 100
+                };
+            });
+    };
+
+    const adjustments = getAdjustments(baseCost);
+    const totalCostWithAdjustments = baseCost + adjustments.reduce((acc, adj) => acc + adj.amount, 0);
+
     const formatWhatsAppMessage = () => {
         let message = `*فاتورة زجاج - ${customerName || 'عميل'}*\n\n`;
 
@@ -152,8 +184,19 @@ export function Calculator() {
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*الإجمالي الكلي:* ${totals.area.toFixed(2)} م²\n`;
-        message += `*الإجمالي:* ${totals.cost.toFixed(2)} ج.م`;
+        message += `*المساحة الكلية:* ${totals.area.toFixed(2)} م²\n`;
+        message += `*إجمالي سعر الزجاج:* ${baseCost.toFixed(2)} ج.م\n`;
+
+        if (adjustments.length > 0) {
+            message += `--- الرسوم والخصومات ---\n`;
+            adjustments.forEach(adj => {
+                const prefix = adj.amount >= 0 ? '+' : '';
+                message += `${adj.name}: ${prefix}${adj.amount.toFixed(2)} ج.م\n`;
+            });
+            message += `━━━━━━━━━━━━━━━━\n`;
+        }
+
+        message += `*الإجمالي المطلوب:* ${totalCostWithAdjustments.toFixed(2)} ج.م`;
 
         return message;
     };
@@ -177,13 +220,16 @@ export function Calculator() {
             customerName,
             phoneNumber,
             items: activeItems,
-            totalCost: totals.cost,
-            totalArea: totals.area
+            baseCost,
+            totalCost: totalCostWithAdjustments,
+            totalArea: totals.area,
+            adjustments
         });
         alert('تم حفظ الطلب بنجاح!');
         setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
         setCustomerName('');
         setPhoneNumber('');
+        setActiveButtons([]);
     };
 
     return (
@@ -335,6 +381,51 @@ export function Calculator() {
                 })}
             </div>
 
+            {/* Custom Buttons Section */}
+            {customButtons && customButtons.length > 0 && activeItems.length > 0 && (
+                <div className="calculator-adjustments-container no-print">
+                    <span className="adjustments-section-label">إضافات وتعديلات سريعة:</span>
+                    <div className="adjustments-buttons-grid">
+                        {customButtons.map(btn => {
+                            const isActive = activeButtons.includes(btn.id);
+                            let estimatedAmount = 0;
+                            if (btn.type === 'discount_percent') {
+                                estimatedAmount = - (baseCost * btn.value / 100);
+                            } else if (btn.type === 'discount_fixed') {
+                                estimatedAmount = - btn.value;
+                            } else if (btn.type === 'fee_percent') {
+                                estimatedAmount = (baseCost * btn.value / 100);
+                            } else if (btn.type === 'fee_fixed') {
+                                estimatedAmount = btn.value;
+                            }
+                            
+                            const amountSign = estimatedAmount >= 0 ? '+' : '';
+                            const isDiscount = btn.type.startsWith('discount');
+
+                            return (
+                                <button
+                                    key={btn.id}
+                                    type="button"
+                                    onClick={() => {
+                                        if (isActive) {
+                                            setActiveButtons(activeButtons.filter(id => id !== btn.id));
+                                        } else {
+                                            setActiveButtons([...activeButtons, btn.id]);
+                                        }
+                                    }}
+                                    className={`btn-adjustment ${isActive ? 'active' : ''} ${isDiscount ? 'discount' : 'fee'}`}
+                                >
+                                    <span className="adjustment-name">{btn.name}</span>
+                                    <span className="adjustment-value">
+                                        ({amountSign}{Math.round(Math.abs(estimatedAmount))} ج.م)
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Bottom Actions */}
             <div className="calculator-footer no-print">
                 <button onClick={addGroup} className="btn-add-row">
@@ -347,9 +438,15 @@ export function Calculator() {
                         <span className="total-label">إجمالي المساحة:</span>
                         <span className="total-value">{totals.area.toFixed(2)} م²</span>
                     </div>
-                    <div className="total-item">
-                        <span className="total-label">إجمالي السعر:</span>
-                        <span className="total-value">{totals.cost.toFixed(2)} ج.م</span>
+                    {adjustments.length > 0 && (
+                        <div className="total-item base-cost-item">
+                            <span className="total-label">سعر الزجاج:</span>
+                            <span className="total-value-small">{baseCost.toFixed(2)} ج.م</span>
+                        </div>
+                    )}
+                    <div className="total-item final-cost-item">
+                        <span className="total-label">الحساب الإجمالي الكلي:</span>
+                        <span className="total-value">{totalCostWithAdjustments.toFixed(2)} ج.م</span>
                     </div>
                 </div>
             </div>
@@ -443,9 +540,19 @@ export function Calculator() {
                                     <span>إجمالي المساحة الكلية:</span>
                                     <strong>{totals.area.toFixed(2)} م²</strong>
                                 </div>
+                                <div className="totals-row">
+                                    <span>إجمالي سعر الزجاج:</span>
+                                    <strong>{baseCost.toFixed(2)} ج.م</strong>
+                                </div>
+                                {adjustments.map(adj => (
+                                    <div key={adj.id} className="totals-row sheet-adjustment-row">
+                                        <span>{adj.name}:</span>
+                                        <strong>{adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(2)} ج.م</strong>
+                                    </div>
+                                ))}
                                 <div className="totals-row total-price-row">
                                     <span>الحساب الإجمالي المطلوب:</span>
-                                    <strong>{totals.cost.toFixed(2)} ج.م</strong>
+                                    <strong>{totalCostWithAdjustments.toFixed(2)} ج.م</strong>
                                 </div>
                             </div>
 

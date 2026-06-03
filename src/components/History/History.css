@@ -225,6 +225,60 @@
     opacity: 0.7;
 }
 
+/* Price Breakdown and Adjustments in History */
+.price-breakdown {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.adjustments-tooltip {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.7;
+    background-color: var(--table-header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-top: 4px;
+}
+
+.adjustments-tooltip span {
+    white-space: nowrap;
+}
+
+.history-card-adjustments {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 10px;
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.card-adj-header {
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.8;
+}
+
+.history-card-item.adj-row {
+    background-color: transparent;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    padding: 4px 5px;
+}
+
+.history-card-item.adj-row span:last-child {
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 1;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .history-container {
