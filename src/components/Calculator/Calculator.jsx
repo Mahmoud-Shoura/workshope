@@ -10,6 +10,8 @@ export function Calculator() {
     ]);
     const [customerName, setCustomerName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [deposit, setDeposit] = useState('');
+    const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
     const [showPrintSheet, setShowPrintSheet] = useState(false);
     const [activeButtons, setActiveButtons] = useState([]);
 
@@ -152,6 +154,12 @@ export function Calculator() {
                     amount = (subtotal * btn.value / 100);
                 } else if (btn.type === 'fee_fixed') {
                     amount = btn.value;
+                } else if (btn.type === 'fee_linear_meter') {
+                    const totalLinearMeters = activeItems.reduce((sum, item) => sum + (((item.length + item.width) * 2) / 100) * item.qty, 0);
+                    amount = totalLinearMeters * btn.value;
+                } else if (btn.type === 'fee_per_piece') {
+                    const totalQty = activeItems.reduce((sum, item) => sum + item.qty, 0);
+                    amount = totalQty * btn.value;
                 }
                 return {
                     id: btn.id,
@@ -196,7 +204,14 @@ export function Calculator() {
             message += `━━━━━━━━━━━━━━━━\n`;
         }
 
-        message += `*الإجمالي المطلوب:* ${totalCostWithAdjustments.toFixed(2)} ج.م`;
+        const depositAmount = Number(deposit || 0);
+        const remaining = totalCostWithAdjustments - depositAmount;
+
+        message += `*الإجمالي المطلوب:* ${totalCostWithAdjustments.toFixed(2)} ج.م\n`;
+        message += `*العربون/المقدم:* ${depositAmount.toFixed(2)} ج.م\n`;
+        message += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
+        message += `_التاريخ: ${new Date(orderDate).toLocaleDateString('ar-EG')}_\n`;
+        message += `_شكراً لتعاملكم معنا ورشة الزجاج الحديثة_`;
 
         return message;
     };
@@ -216,6 +231,10 @@ export function Calculator() {
         if (!customerName) return alert('برجاء إدخال اسم العميل');
         if (activeItems.length === 0) return alert('برجاء إدخال مقاسات صحيحة أولاً');
 
+        const now = new Date();
+        const selectedDate = new Date(orderDate);
+        selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
         saveOrder({
             customerName,
             phoneNumber,
@@ -223,12 +242,17 @@ export function Calculator() {
             baseCost,
             totalCost: totalCostWithAdjustments,
             totalArea: totals.area,
-            adjustments
+            adjustments,
+            deposit: Number(deposit || 0),
+            remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
+            date: selectedDate.toISOString()
         });
         alert('تم حفظ الطلب بنجاح!');
         setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
         setCustomerName('');
         setPhoneNumber('');
+        setDeposit('');
+        setOrderDate(new Date().toISOString().split('T')[0]);
         setActiveButtons([]);
     };
 
@@ -249,6 +273,19 @@ export function Calculator() {
                         value={phoneNumber}
                         onChange={e => setPhoneNumber(e.target.value)}
                         dir="ltr"
+                    />
+                    <input
+                        type="number"
+                        placeholder="العربون / المقدم المدفوع (ج.م)"
+                        value={deposit}
+                        onChange={e => setDeposit(e.target.value)}
+                        min="0"
+                    />
+                    <input
+                        type="date"
+                        value={orderDate}
+                        onChange={e => setOrderDate(e.target.value)}
+                        title="تاريخ المعاملة"
                     />
                 </div>
                 <div className="calculator-buttons">
@@ -397,6 +434,12 @@ export function Calculator() {
                                 estimatedAmount = (baseCost * btn.value / 100);
                             } else if (btn.type === 'fee_fixed') {
                                 estimatedAmount = btn.value;
+                            } else if (btn.type === 'fee_linear_meter') {
+                                const totalLinearMeters = activeItems.reduce((sum, item) => sum + (((item.length + item.width) * 2) / 100) * item.qty, 0);
+                                estimatedAmount = totalLinearMeters * btn.value;
+                            } else if (btn.type === 'fee_per_piece') {
+                                const totalQty = activeItems.reduce((sum, item) => sum + item.qty, 0);
+                                estimatedAmount = totalQty * btn.value;
                             }
                             
                             const amountSign = estimatedAmount >= 0 ? '+' : '';
@@ -445,8 +488,16 @@ export function Calculator() {
                         </div>
                     )}
                     <div className="total-item final-cost-item">
-                        <span className="total-label">الحساب الإجمالي الكلي:</span>
+                        <span className="total-label">الحساب الإجمالي:</span>
                         <span className="total-value">{totalCostWithAdjustments.toFixed(2)} ج.م</span>
+                    </div>
+                    <div className="total-item deposit-item">
+                        <span className="total-label">العربون / المقدم:</span>
+                        <span className="total-value text-green" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{(Number(deposit || 0)).toFixed(2)} ج.م</span>
+                    </div>
+                    <div className="total-item remaining-item">
+                        <span className="total-label font-bold" style={{ fontWeight: 'bold' }}>المتبقي للاستلام:</span>
+                        <span className="total-value font-bold text-red" style={{ color: '#c62828', fontWeight: 'bold' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.م</span>
                     </div>
                 </div>
             </div>
@@ -482,7 +533,7 @@ export function Calculator() {
                                     <strong>رقم الهاتف:</strong> {phoneNumber || '-'}
                                 </div>
                                 <div>
-                                    <strong>التاريخ:</strong> {new Date().toLocaleDateString('ar-EG')}
+                                    <strong>التاريخ:</strong> {new Date(orderDate).toLocaleDateString('ar-EG')}
                                 </div>
                             </div>
 
@@ -553,6 +604,14 @@ export function Calculator() {
                                 <div className="totals-row total-price-row">
                                     <span>الحساب الإجمالي المطلوب:</span>
                                     <strong>{totalCostWithAdjustments.toFixed(2)} ج.م</strong>
+                                </div>
+                                <div className="totals-row sheet-deposit-row" style={{ borderTop: '1px dashed #ccc', paddingTop: '8px' }}>
+                                    <span>العربون / المقدم:</span>
+                                    <strong>{(Number(deposit || 0)).toFixed(2)} ج.م</strong>
+                                </div>
+                                <div className="totals-row sheet-remaining-row" style={{ fontWeight: 'bold' }}>
+                                    <span>المتبقي للاستلام:</span>
+                                    <strong style={{ color: '#c62828' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.m</strong>
                                 </div>
                             </div>
 

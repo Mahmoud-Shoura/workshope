@@ -28,13 +28,247 @@
     font-size: 14px;
 }
 
-/* Table View */
+/* Search Bar Styling */
+.search-bar-container {
+    position: relative;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2px 15px;
+    box-shadow: 0 2px 5px var(--shadow);
+}
+
+.search-icon {
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-left: 10px;
+}
+
+.search-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 10px 5px !important;
+    width: 100%;
+    outline: none;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.search-input:focus {
+    box-shadow: none !important;
+}
+
+/* Grouped Customers Grid */
+.customers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.customer-summary-card {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.customer-summary-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px var(--shadow);
+    border-color: var(--button-bg);
+}
+
+.nameless-card {
+    border-style: dashed;
+    opacity: 0.9;
+}
+
+.card-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-color: var(--bg-color);
+    color: var(--button-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+}
+
+.customer-info h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.badge-fats {
+    display: inline-block;
+    font-size: 11px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.card-financials {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.financial-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.financial-item span {
+    opacity: 0.8;
+}
+
+.financial-item strong {
+    font-size: 14px;
+}
+
+/* Customer Detailed Page Styles */
+.customer-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+.btn-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--header-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+    background-color: var(--row-hover);
+    border-color: var(--text-color);
+}
+
+.customer-info-title {
+    text-align: left;
+}
+
+.customer-info-title h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.phone-subtitle {
+    margin: 5px 0 0 0;
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Stats Cards Summary Row */
+.customer-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px var(--shadow);
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.text-green-card {
+    border-left: 4px solid #2e7d32;
+}
+
+.text-green-card .stat-value {
+    color: #2e7d32;
+}
+
+.text-red-card {
+    border-left: 4px solid #c62828;
+}
+
+.text-red-card .stat-value {
+    color: #c62828;
+}
+
+/* Colors Utilities */
+.text-green {
+    color: #2e7d32 !important;
+}
+
+.text-red {
+    color: #c62828 !important;
+}
+
+.highlight-remaining strong {
+    color: #c62828;
+    font-weight: 800;
+}
+
+/* Table View customizations */
 .history-table-wrapper {
     background-color: var(--header-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 1px 3px var(--shadow);
+    margin-bottom: 30px;
 }
 
 .history-table {
@@ -44,64 +278,43 @@
     font-size: 14px;
 }
 
-.history-table thead {
-    background-color: var(--table-header-bg);
-    font-weight: 600;
-    font-size: 12px;
-}
-
 .history-table th {
-    padding: 12px 20px;
+    padding: 12px 15px;
     border-bottom: 2px solid var(--border-color);
+    background-color: var(--table-header-bg);
 }
 
 .history-table td {
-    padding: 12px 20px;
+    padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
 }
 
-.history-table tbody tr:hover {
-    background-color: var(--row-hover);
+.history-date .time-sub {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 2px;
 }
 
-.history-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.history-date {
-    color: var(--text-color);
-    opacity: 0.7;
-    white-space: nowrap;
-    font-size: 13px;
-}
-
-.history-customer {
-    font-weight: 600;
-}
-
-.history-items {
+.payment-breakdown {
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-
-.history-items div {
     font-size: 12px;
-    color: var(--text-color);
-    opacity: 0.8;
+    font-weight: 600;
 }
 
-.history-price {
-    font-weight: 700;
-    color: var(--button-bg);
-    font-size: 15px;
+.history-actions-cell {
+    width: 100px;
 }
 
-/* WhatsApp Buttons */
-.history-actions {
-    text-align: center;
+.actions-flex {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
 }
 
+/* Action Buttons */
 .btn-whatsapp-small {
     background-color: #25D366;
     color: white;
@@ -126,6 +339,40 @@
     opacity: 0.5;
 }
 
+.btn-delete-small {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-small:hover {
+    background-color: #d32f2f;
+    transform: scale(1.05);
+}
+
+.btn-delete-card {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-card:hover {
+    background-color: #d32f2f;
+}
 
 /* Mobile Cards */
 .history-mobile-cards {
@@ -148,12 +395,6 @@
     padding-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 12px;
-}
-
-.history-card-header h3 {
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0 0 5px 0;
 }
 
 .history-card-date {
@@ -191,7 +432,6 @@
 
 .btn-whatsapp-card:hover:not(:disabled) {
     background-color: #20BA5A;
-    transform: scale(1.05);
 }
 
 .btn-whatsapp-card:disabled {
@@ -199,7 +439,6 @@
     cursor: not-allowed;
     opacity: 0.5;
 }
-
 
 .history-card-items {
     display: flex;
@@ -279,6 +518,21 @@
     opacity: 1;
 }
 
+.history-card-payment-summary {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 8px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.payment-row {
+    display: flex;
+    justify-content: space-between;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .history-container {
@@ -291,5 +545,18 @@
 
     .history-mobile-cards {
         display: block;
+    }
+
+    .customer-stats-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .customer-detail-header {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .customer-info-title {
+        text-align: right;
     }
 }

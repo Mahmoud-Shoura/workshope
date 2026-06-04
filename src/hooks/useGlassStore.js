@@ -43,10 +43,14 @@ export function useGlassStore() {
 
     const saveOrder = (order) => {
         setOrders(prev => [
-            { ...order, id: Date.now().toString(), date: new Date().toISOString() },
+            { ...order, id: Date.now().toString(), date: order.date || new Date().toISOString() },
             ...prev
-        ])
-    }
+        ]);
+    };
+
+    const deleteOrder = (id) => {
+        setOrders(prev => prev.filter(o => o.id !== id));
+    };
 
     return {
         glassTypes,
@@ -58,6 +62,7 @@ export function useGlassStore() {
         updateCustomButton,
         deleteCustomButton,
         orders,
-        saveOrder
+        saveOrder,
+        deleteOrder
     };
 }

@@ -73,6 +73,8 @@ export function GlassTypeManager() {
             case 'discount_fixed': return 'خصم مبلغ ثابت (ج.م)';
             case 'fee_percent': return 'إضافة نسبة مئوية (%)';
             case 'fee_fixed': return 'إضافة مبلغ ثابت (ج.م)';
+            case 'fee_linear_meter': return 'إضافة بالمتر الطولي (م.ط)';
+            case 'fee_per_piece': return 'إضافة بالقطعة';
             default: return '';
         }
     };
@@ -80,6 +82,12 @@ export function GlassTypeManager() {
     const getButtonDisplayValue = (button) => {
         if (button.type.includes('percent')) {
             return `${button.value}%`;
+        }
+        if (button.type === 'fee_linear_meter') {
+            return `${button.value} ج.م / م.ط`;
+        }
+        if (button.type === 'fee_per_piece') {
+            return `${button.value} ج.م / قطعة`;
         }
         return `${button.value} ج.م`;
     };
@@ -195,6 +203,8 @@ export function GlassTypeManager() {
                                 <option value="discount_fixed">خصم مبلغ ثابت (ج.م)</option>
                                 <option value="fee_percent">رسوم إضافية نسبة مئوية (%)</option>
                                 <option value="fee_fixed">رسوم إضافية مبلغ ثابت (ج.م)</option>
+                                <option value="fee_linear_meter">رسوم إضافية بالمتر الطولي (ج.م / م.ط)</option>
+                                <option value="fee_per_piece">رسوم إضافية بالقطعة (ج.م / قطعة)</option>
                             </select>
                         </div>
                         <div className="form-field">
