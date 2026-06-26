@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut, Settings } from 'lucide-react';
 import { useTheme } from '../ThemeProvider/ThemeProvider';
 import './Layout.css';
 
@@ -59,7 +59,7 @@ export function Layout({ children, currentView, onViewChange }) {
             {/* Sidebar */}
             <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="layout-sidebar-header">
-                    ورشة الزجاج
+                    نظام إدارة
                 </div>
                 <div className="layout-sidebar-nav">
                     <NavItem 
@@ -82,6 +82,14 @@ export function Layout({ children, currentView, onViewChange }) {
                         view="history" 
                         icon={History} 
                         label="السجل" 
+                        currentView={currentView} 
+                        onViewChange={onViewChange} 
+                        setSidebarOpen={setSidebarOpen} 
+                    />
+                    <NavItem 
+                        view="settings" 
+                        icon={Settings} 
+                        label="الإعدادات" 
                         currentView={currentView} 
                         onViewChange={onViewChange} 
                         setSidebarOpen={setSidebarOpen} 
@@ -125,6 +133,7 @@ export function Layout({ children, currentView, onViewChange }) {
                         {currentView === 'calculator' && 'الحاسبة'}
                         {currentView === 'inventory' && 'المخزن'}
                         {currentView === 'history' && 'السجل'}
+                        {currentView === 'settings' && 'الإعدادات'}
                     </span>
                 </header>
 

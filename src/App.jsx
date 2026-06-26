@@ -3,12 +3,18 @@ import { Layout } from './components/Layout/Layout';
 import { Calculator } from './components/Calculator/Calculator';
 import { GlassTypeManager } from './components/GlassTypeManager/GlassTypeManager';
 import { History } from './components/History/History';
+import { Settings } from './components/Settings/Settings';
 import { ThemeProvider } from './components/ThemeProvider/ThemeProvider';
+import { LoginPage } from './components/LoginPage/LoginPage';
+import { useGlassStore, GlassStoreProvider } from './hooks/useGlassStore';
 
-function App() {
+// Inner app that has access to the store
+function AppContent() {
+  const { currentUser } = useGlassStore();
+
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
-    return ['calculator', 'inventory', 'history'].includes(hash) ? hash : 'calculator';
+    return ['calculator', 'inventory', 'history', 'settings'].includes(hash) ? hash : 'calculator';
   };
 
   const [currentView, setCurrentView] = useState(getInitialView);
@@ -16,14 +22,13 @@ function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['calculator', 'inventory', 'history'].includes(hash)) {
+      if (['calculator', 'inventory', 'history', 'settings'].includes(hash)) {
         setCurrentView(hash);
       } else if (!hash) {
         setCurrentView('calculator');
       }
     };
     window.addEventListener('hashchange', handleHashChange);
-    // Ensure hash is set initially
     if (!window.location.hash) {
       window.location.hash = 'calculator';
     }
@@ -35,13 +40,27 @@ function App() {
     setCurrentView(view);
   };
 
+  // Show login page if not authenticated
+  if (!currentUser) {
+    return <LoginPage />;
+  }
+
+  return (
+    <Layout currentView={currentView} onViewChange={handleViewChange}>
+      {currentView === 'calculator' && <Calculator />}
+      {currentView === 'inventory' && <GlassTypeManager />}
+      {currentView === 'history' && <History />}
+      {currentView === 'settings' && <Settings />}
+    </Layout>
+  );
+}
+
+function App() {
   return (
     <ThemeProvider>
-      <Layout currentView={currentView} onViewChange={handleViewChange}>
-        {currentView === 'calculator' && <Calculator />}
-        {currentView === 'inventory' && <GlassTypeManager />}
-        {currentView === 'history' && <History />}
-      </Layout>
+      <GlassStoreProvider>
+        <AppContent />
+      </GlassStoreProvider>
     </ThemeProvider>
   );
 }
