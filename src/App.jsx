@@ -6,11 +6,14 @@ import { History } from './components/History/History';
 import { Settings } from './components/Settings/Settings';
 import { ThemeProvider } from './components/ThemeProvider/ThemeProvider';
 import { LoginPage } from './components/LoginPage/LoginPage';
+import { LandingPage } from './components/LandingPage/LandingPage';
+import { SubscriptionBlock } from './components/Subscription/SubscriptionBlock';
 import { useGlassStore, GlassStoreProvider } from './hooks/useGlassStore';
 
 // Inner app that has access to the store
 function AppContent() {
-  const { currentUser } = useGlassStore();
+  const { currentUser, subscription, loading } = useGlassStore();
+  const [showAuth, setShowAuth] = useState(false);
 
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
@@ -40,9 +43,33 @@ function AppContent() {
     setCurrentView(view);
   };
 
-  // Show login page if not authenticated
+  if (loading) {
+    return (
+      <div style={{
+        background: '#0f172a',
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: '#fff',
+        fontFamily: 'sans-serif'
+      }}>
+        <h2>جاري تحميل البيانات...</h2>
+      </div>
+    );
+  }
+
+  // Show landing page if not logged in and hasn't clicked "Get Started"
   if (!currentUser) {
+    if (!showAuth) {
+      return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+    }
     return <LoginPage />;
+  }
+
+  // If subscription has expired, prompt to pay
+  if (subscription?.status === 'expired') {
+    return <SubscriptionBlock />;
   }
 
   return (
@@ -64,5 +91,6 @@ function App() {
     </ThemeProvider>
   );
 }
+
 
 export default App;

@@ -1,18 +1,77 @@
-import React, { useState } from 'react';
-import { Save, Printer, Sliders, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, Printer, Sliders, FileText, Users, CreditCard, Check, X } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Settings.css';
 
 export function Settings() {
-    const { printSettings, updatePrintSettings } = useGlassStore();
-    const [workshopName, setWorkshopName] = useState(printSettings?.workshopName || 'ورشة الزجاج الحديثة');
-    const [ownerName, setOwnerName] = useState(printSettings?.ownerName || '');
-    const [taxNumber, setTaxNumber] = useState(printSettings?.taxNumber || '');
+    const { 
+        printSettings, 
+        updatePrintSettings, 
+        userRole, 
+        subscription, 
+        getWorkshopMembers, 
+        inviteMember, 
+        getPendingPayments, 
+        confirmPayment 
+    } = useGlassStore();
+
+    const [workshopName, setWorkshopName] = useState(printSettings?.workshop_name || 'ورشة الزجاج الحديثة');
+    const [ownerName, setOwnerName] = useState(printSettings?.owner_name || '');
+    const [taxNumber, setTaxNumber] = useState(printSettings?.tax_number || '');
     const [address, setAddress] = useState(printSettings?.address || '');
     const [phone, setPhone] = useState(printSettings?.phone || '');
-    const [footerNote, setFooterNote] = useState(printSettings?.footerNote || 'نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية');
+    const [footerNote, setFooterNote] = useState(printSettings?.footer_note || 'نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية');
     
     const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+
+    // Owner management states
+    const [members, setMembers] = useState([]);
+    const [pendingPayments, setPendingPayments] = useState([]);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [inviteRole, setInviteRole] = useState('employee');
+    const [inviteError, setInviteError] = useState('');
+    const [inviteSuccess, setInviteSuccess] = useState(false);
+
+    const isOwner = userRole === 'owner';
+
+    useEffect(() => {
+        if (isOwner) {
+            loadOwnerPanel();
+        }
+    }, [isOwner]);
+
+    const loadOwnerPanel = async () => {
+        const [memList, payList] = await Promise.all([
+            getWorkshopMembers(),
+            getPendingPayments()
+        ]);
+        setMembers(memList);
+        setPendingPayments(payList);
+    };
+
+    const handleInvite = async (e) => {
+        e.preventDefault();
+        setInviteError('');
+        setInviteSuccess(false);
+
+        if (!inviteEmail.trim()) return;
+
+        const res = await inviteMember(inviteEmail.trim(), inviteRole);
+        if (res.success) {
+            setInviteSuccess(true);
+            setInviteEmail('');
+            loadOwnerPanel();
+        } else {
+            setInviteError(res.error || 'فشلت دعوة المستخدم');
+        }
+    };
+
+    const handleConfirmPayment = async (paymentId, decision) => {
+        const res = await confirmPayment(paymentId, decision);
+        if (res.success) {
+            loadOwnerPanel();
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -53,6 +112,7 @@ export function Settings() {
                                     onChange={(e) => setWorkshopName(e.target.value)}
                                     placeholder="مثال: مصنع زجاج السلام"
                                     required
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
 
@@ -63,6 +123,7 @@ export function Settings() {
                                     value={taxNumber}
                                     onChange={(e) => setTaxNumber(e.target.value)}
                                     placeholder="مثال: 123-456-789"
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
 
@@ -73,6 +134,7 @@ export function Settings() {
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
                                     placeholder="مثال: 010xxxxxxxx"
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
 
@@ -83,6 +145,7 @@ export function Settings() {
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
                                     placeholder="مثال: القاهرة، مدينة نصر، شارع الطيران"
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
 
@@ -93,6 +156,7 @@ export function Settings() {
                                     value={ownerName}
                                     onChange={(e) => setOwnerName(e.target.value)}
                                     placeholder="مثال: أ/ محمد أحمد"
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
 
@@ -103,13 +167,14 @@ export function Settings() {
                                     onChange={(e) => setFooterNote(e.target.value)}
                                     placeholder="شكر وتقدير للعملاء أو شروط الاسترجاع والاستلام..."
                                     rows="3"
+                                    disabled={userRole === 'employee'}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div className="settings-actions">
-                        <button type="submit" className="btn-save-settings">
+                        <button type="submit" className="btn-save-settings" disabled={userRole === 'employee'}>
                             <Save size={18} />
                             حفظ الإعدادات
                         </button>
@@ -168,6 +233,120 @@ export function Settings() {
                     </div>
                 </div>
             </div>
+
+            {/* Owner/Subscription Portal (Only visible to Workshop Owner) */}
+            {isOwner && (
+                <div className="owner-portal-layout">
+                    {/* Member Management */}
+                    <div className="owner-card">
+                        <div className="card-header">
+                            <Users className="card-icon" size={20} />
+                            <h3>إدارة أعضاء الورشة</h3>
+                        </div>
+
+                        <form onSubmit={handleInvite} className="invite-form">
+                            <div className="invite-inputs">
+                                <input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    placeholder="البريد الإلكتروني للعضو الجديد"
+                                    required
+                                />
+                                <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+                                    <option value="accountant">محاسب (كامل الصلاحيات المالية)</option>
+                                    <option value="employee">عامل (تسجيل مقاسات وطلبات فقط)</option>
+                                </select>
+                                <button type="submit" className="btn-invite">إرسال دعوة</button>
+                            </div>
+                            {inviteError && <p className="error-text">⚠️ {inviteError}</p>}
+                            {inviteSuccess && <p className="success-text">✔️ تم إرسال الدعوة بنجاح!</p>}
+                        </form>
+
+                        <div className="members-list">
+                            <h4>الأعضاء الحاليون:</h4>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>البريد / المعرف</th>
+                                        <th>الدور</th>
+                                        <th>الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {members.map(m => (
+                                        <tr key={m.id}>
+                                            <td style={{ direction: 'ltr', textAlign: 'right' }}>
+                                                {m.invited_email || m.user_id}
+                                            </td>
+                                            <td>
+                                                {m.role === 'owner' ? 'المالك' : m.role === 'accountant' ? 'محاسب' : 'عامل'}
+                                            </td>
+                                            <td>
+                                                {m.user_id ? <span className="status-badge active">نشط</span> : <span className="status-badge pending">معلق</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Subscription & Platform Payments (Admin Simulation) */}
+                    <div className="owner-card">
+                        <div className="card-header">
+                            <CreditCard className="card-icon" size={20} />
+                            <h3>الاشتراك والتحويلات المعلقة</h3>
+                        </div>
+
+                        <div className="current-sub-info">
+                            <p>حالة الاشتراك الحالي: 
+                                <strong className={`sub-status ${subscription?.status}`}>
+                                    {subscription?.status === 'trial' ? 'فترة تجريبية' : subscription?.status === 'active' ? 'نشط' : 'منتهي'}
+                                </strong>
+                            </p>
+                            <p>تاريخ انتهاء الاشتراك: <strong>{subscription ? new Date(subscription.end_date).toLocaleDateString('ar-EG') : 'غير متوفر'}</strong></p>
+                        </div>
+
+                        <div className="pending-payments-list">
+                            <h4>طلبات التحويل المعلقة للمراجعة (بوابة الإدارة):</h4>
+                            {pendingPayments.length === 0 ? (
+                                <p className="no-payments">لا يوجد طلبات دفع معلقة حالياً للمراجعة.</p>
+                            ) : (
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>الورشة</th>
+                                            <th>المبلغ</th>
+                                            <th>الطريقة</th>
+                                            <th>المرجع</th>
+                                            <th>الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pendingPayments.map(p => (
+                                            <tr key={p.id}>
+                                                <td>{p.subscriptions?.workshops?.name}</td>
+                                                <td>{p.amount} EGP</td>
+                                                <td>{p.method === 'instapay' ? 'InstaPay' : 'Vodafone Cash'}</td>
+                                                <td>{p.transaction_ref}</td>
+                                                <td className="actions-cell">
+                                                    <button onClick={() => handleConfirmPayment(p.id, 'confirmed')} className="btn-approve" title="تأكيد الدفع">
+                                                        <Check size={16} />
+                                                    </button>
+                                                    <button onClick={() => handleConfirmPayment(p.id, 'rejected')} className="btn-reject" title="رفض">
+                                                        <X size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

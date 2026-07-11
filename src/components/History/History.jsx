@@ -4,7 +4,8 @@ import { useGlassStore } from '../../hooks/useGlassStore';
 import './History.css';
 
 export function History() {
-    const { orders, deleteOrder } = useGlassStore();
+    const { orders, deleteOrder, userRole } = useGlassStore();
+    const isEmployee = userRole === 'employee';
     const [selectedCustomerName, setSelectedCustomerName] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -148,24 +149,26 @@ export function History() {
                 </div>
 
                 {/* Customer Global Stats Summary */}
-                <div className="customer-stats-summary">
-                    <div className="stat-card">
-                        <span className="stat-label">عدد الفواتير</span>
-                        <span className="stat-value">{selectedCustomer.ordersCount}</span>
+                {!isEmployee && (
+                    <div className="customer-stats-summary">
+                        <div className="stat-card">
+                            <span className="stat-label">عدد الفواتير</span>
+                            <span className="stat-value">{selectedCustomer.ordersCount}</span>
+                        </div>
+                        <div className="stat-card">
+                            <span className="stat-label">إجمالي المطلوب</span>
+                            <span className="stat-value">{selectedCustomer.totalCost.toLocaleString()} ج.م</span>
+                        </div>
+                        <div className="stat-card text-green-card">
+                            <span className="stat-label">إجمالي المدفوع (عربون)</span>
+                            <span className="stat-value">{selectedCustomer.totalDeposit.toLocaleString()} ج.م</span>
+                        </div>
+                        <div className="stat-card text-red-card">
+                            <span className="stat-label">إجمالي المتبقي</span>
+                            <span className="stat-value">{selectedCustomer.totalRemaining.toLocaleString()} ج.م</span>
+                        </div>
                     </div>
-                    <div className="stat-card">
-                        <span className="stat-label">إجمالي المطلوب</span>
-                        <span className="stat-value">{selectedCustomer.totalCost.toLocaleString()} ج.م</span>
-                    </div>
-                    <div className="stat-card text-green-card">
-                        <span className="stat-label">إجمالي المدفوع (عربون)</span>
-                        <span className="stat-value">{selectedCustomer.totalDeposit.toLocaleString()} ج.م</span>
-                    </div>
-                    <div className="stat-card text-red-card">
-                        <span className="stat-label">إجمالي المتبقي</span>
-                        <span className="stat-value">{selectedCustomer.totalRemaining.toLocaleString()} ج.م</span>
-                    </div>
-                </div>
+                )}
 
                 <h3>تفاصيل الفواتير والمعاملات</h3>
 
@@ -241,13 +244,15 @@ export function History() {
                                                 >
                                                     <MessageCircle size={16} />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDeleteOrder(order.id)}
-                                                    className="btn-delete-small"
-                                                    title="حذف الفاتورة"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {!isEmployee && (
+                                                    <button
+                                                        onClick={() => handleDeleteOrder(order.id)}
+                                                        className="btn-delete-small"
+                                                        title="حذف الفاتورة"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -283,13 +288,15 @@ export function History() {
                                             >
                                                 <MessageCircle size={18} />
                                             </button>
-                                            <button
-                                                onClick={() => handleDeleteOrder(order.id)}
-                                                className="btn-delete-card"
-                                                title="حذف الفاتورة"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            {!isEmployee && (
+                                                <button
+                                                    onClick={() => handleDeleteOrder(order.id)}
+                                                    className="btn-delete-card"
+                                                    title="حذف الفاتورة"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
