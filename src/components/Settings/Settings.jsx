@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Printer, Sliders, FileText, Users, CreditCard, Check, X } from 'lucide-react';
+import { Save, Printer, Sliders, FileText, Users, CreditCard, Check, X, Plus } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Settings.css';
 
@@ -12,7 +12,9 @@ export function Settings() {
         getWorkshopMembers, 
         inviteMember, 
         getPendingPayments, 
-        confirmPayment 
+        confirmPayment,
+        activeWorkshop,
+        createWorkshop
     } = useGlassStore();
 
     const [workshopName, setWorkshopName] = useState(printSettings?.workshop_name || 'ورشة الزجاج الحديثة');
@@ -23,6 +25,10 @@ export function Settings() {
     const [footerNote, setFooterNote] = useState(printSettings?.footer_note || 'نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية');
     
     const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+    const [showCreateWorkshop, setShowCreateWorkshop] = useState(!activeWorkshop);
+    const [newWorkshopName, setNewWorkshopName] = useState('');
+    const [workshopLoading, setWorkshopLoading] = useState(false);
+    const [workshopError, setWorkshopError] = useState('');
 
     // Owner management states
     const [members, setMembers] = useState([]);
@@ -73,6 +79,28 @@ export function Settings() {
         }
     };
 
+    const handleCreateWorkshop = async (e) => {
+        e.preventDefault();
+        setWorkshopError('');
+        
+        if (!newWorkshopName.trim()) {
+            setWorkshopError('برجاء إدخال اسم الورشة');
+            return;
+        }
+
+        setWorkshopLoading(true);
+        const result = await createWorkshop(newWorkshopName.trim());
+        setWorkshopLoading(false);
+
+        if (result.success) {
+            setNewWorkshopName('');
+            setShowCreateWorkshop(false);
+            setWorkshopName(newWorkshopName.trim());
+        } else {
+            setWorkshopError(result.error || 'فشل في إنشاء الورشة');
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         updatePrintSettings({
@@ -89,9 +117,77 @@ export function Settings() {
 
     return (
         <div className="settings-container">
+            {/* Create Workshop Modal */}
+            {showCreateWorkshop && !activeWorkshop && (
+                <div className="modal-overlay" onClick={() => !workshopLoading && setShowCreateWorkshop(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>إنشاء ورشة عمل جديدة</h2>
+                        </div>
+                        <form onSubmit={handleCreateWorkshop} className="modal-form">
+                            <div className="form-field">
+                                <label>اسم الورشة</label>
+                                <input
+                                    type="text"
+                                    value={newWorkshopName}
+                                    onChange={(e) => setNewWorkshopName(e.target.value)}
+                                    placeholder="مثال: ورشة الأمل للزجاج"
+                                    autoFocus
+                                    disabled={workshopLoading}
+                                    required
+                                />
+                            </div>
+                            {workshopError && (
+                                <p className="error-message" style={{ color: '#d32f2f', marginBottom: '12px' }}>
+                                    ⚠️ {workshopError}
+                                </p>
+                            )}
+                            <div className="modal-actions">
+                                <button 
+                                    type="button" 
+                                    className="btn-cancel"
+                                    onClick={() => setShowCreateWorkshop(false)}
+                                    disabled={workshopLoading}
+                                >
+                                    إلغاء
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    className="btn-save-settings"
+                                    disabled={workshopLoading}
+                                >
+                                    {workshopLoading ? 'جاري الإنشاء...' : 'إنشاء الورشة'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="settings-header">
                 <h2>إعدادات النظام والفاتورة المطبوعة</h2>
                 <p className="settings-subtitle">يمكنك هنا تخصيص بيانات الفاتورة المطبوعة والبيانات الضريبية للنشاط التجاري</p>
+                {!activeWorkshop && (
+                    <button 
+                        className="btn-create-workshop"
+                        onClick={() => setShowCreateWorkshop(true)}
+                        style={{
+                            marginTop: '12px',
+                            padding: '10px 16px',
+                            background: '#4caf50',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        <Plus size={18} />
+                        إنشاء ورشة جديدة
+                    </button>
+                )}
             </div>
 
             <div className="settings-layout">

@@ -12,33 +12,51 @@ export function GlassTypeManager() {
         customButtons,
         addCustomButton,
         updateCustomButton,
-        deleteCustomButton
+        deleteCustomButton,
+        activeWorkshop
     } = useGlassStore();
 
     const [activeTab, setActiveTab] = React.useState('types'); // 'types' | 'buttons'
     const [isAdding, setIsAdding] = React.useState(false);
     const [editingId, setEditingId] = React.useState(null);
+    const [saving, setSaving] = React.useState(false);
+    const [errorMessage, setErrorMessage] = React.useState('');
 
     const [formData, setFormData] = React.useState({ name: '', price: '', unit: 'm2' });
     const [buttonFormData, setButtonFormData] = React.useState({ name: '', type: 'discount_percent', value: '' });
 
-    const handleTypeSubmit = (e) => {
+    const handleTypeSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.price) return;
 
+        setSaving(true);
+        setErrorMessage('');
+
+        const payload = { ...formData, price: Number(formData.price) };
         if (editingId) {
-            updateGlassType(editingId, { ...formData, price: Number(formData.price) });
+            await updateGlassType(editingId, payload);
             setEditingId(null);
+            setIsAdding(false);
         } else {
-            addGlassType({ ...formData, price: Number(formData.price) });
+            const result = await addGlassType(payload);
+            if (!result?.success) {
+                setErrorMessage(result?.error || 'حدث خطأ أثناء إضافة الصنف');
+                setSaving(false);
+                return;
+            }
             setIsAdding(false);
         }
+
         setFormData({ name: '', price: '', unit: 'm2' });
+        setSaving(false);
     };
 
-    const handleButtonSubmit = (e) => {
+    const handleButtonSubmit = async (e) => {
         e.preventDefault();
         if (!buttonFormData.name || !buttonFormData.value) return;
+
+        setSaving(true);
+        setErrorMessage('');
 
         const data = {
             ...buttonFormData,
@@ -46,13 +64,20 @@ export function GlassTypeManager() {
         };
 
         if (editingId) {
-            updateCustomButton(editingId, data);
+            await updateCustomButton(editingId, data);
             setEditingId(null);
+            setIsAdding(false);
         } else {
-            addCustomButton(data);
+            const result = await addCustomButton(data);
+            if (!result?.success) {
+                setErrorMessage(result?.error || 'حدث خطأ أثناء إضافة الزر');
+                setSaving(false);
+                return;
+            }
+            setIsAdding(false);
         }
-        setIsAdding(false);
         setButtonFormData({ name: '', type: 'discount_percent', value: '' });
+        setSaving(false);
     };
 
     const startEditType = (type) => {
@@ -94,6 +119,18 @@ export function GlassTypeManager() {
 
     return (
         <div className="inventory-container">
+            {!activeWorkshop && (
+                <div className="inventory-warning" style={{
+                    background: '#d32f2f',
+                    color: '#fff',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    textAlign: 'center'
+                }}>
+                    <p>لم يتم تحديد ورشة عمل. يرجى إنشاء ورشة أولاً من خلال صفحة التسجيل.</p>
+                </div>
+            )}
             <div className="inventory-header">
                 <h2>إدارة المخزن والإعدادات</h2>
                 <button
@@ -103,6 +140,7 @@ export function GlassTypeManager() {
                         setFormData({ name: '', price: '', unit: 'm2' });
                         setButtonFormData({ name: '', type: 'discount_percent', value: '' });
                     }}
+                    disabled={!activeWorkshop}
                     className="btn-add-type"
                 >
                     <Plus size={16} /> {activeTab === 'types' ? 'إضافة نوع زجاج' : 'إضافة زر مخصص'}
@@ -166,15 +204,16 @@ export function GlassTypeManager() {
                     <div className="inventory-form-actions">
                         <button
                             type="button"
-                            onClick={() => { setIsAdding(false); setEditingId(null); }}
+                            onClick={() => { setIsAdding(false); setEditingId(null); setErrorMessage(''); }}
                             className="btn-cancel"
                         >
                             إلغاء
                         </button>
-                        <button type="submit" className="btn-submit">
-                            {editingId ? 'تحديث' : 'حفظ'}
+                        <button type="submit" className="btn-submit" disabled={saving}>
+                            {saving ? 'جارٍ الحفظ...' : editingId ? 'تحديث' : 'حفظ'}
                         </button>
                     </div>
+                    {errorMessage && <p className="inventory-form-error">{errorMessage}</p>}
                 </form>
             )}
 

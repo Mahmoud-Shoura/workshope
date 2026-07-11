@@ -101,13 +101,23 @@ function useGlassStoreInternal() {
             if (memError) {
                 if (memError.code === 'PGRST116') {
                     // No workshop found yet
+                    console.log('No workshop found for user, waiting for workshop creation');
                     setActiveWorkshop(null);
                     setUserRole(null);
                     setSubscription(null);
+                    setGlassTypes([]);
+                    setCustomButtons([]);
                     setLoading(false);
                     return;
                 }
                 throw memError;
+            }
+
+            if (!membership || !membership.workshop_id) {
+                console.error('Workshop membership incomplete:', membership);
+                setActiveWorkshop(null);
+                setLoading(false);
+                return;
             }
 
             const wId = membership.workshop_id;
@@ -177,11 +187,16 @@ function useGlassStoreInternal() {
     const createWorkshop = async (name) => {
         try {
             setLoading(true);
+            setError(null);
             const { data: wId, error: rpcError } = await supabase.rpc('create_workshop_with_owner', {
                 workshop_name: name
             });
 
             if (rpcError) throw rpcError;
+
+            if (!wId) {
+                throw new Error('فشل في إنشاء الورشة');
+            }
 
             // Create default print settings
             await supabase.from('print_settings').insert({
@@ -200,13 +215,14 @@ function useGlassStoreInternal() {
                 DEFAULT_CUSTOM_BUTTONS.map(b => ({ ...b, workshop_id: wId }))
             );
 
-            // Reload everything for this user
+            // Reload everything for this user - critical step
             if (currentUser) {
                 await loadWorkshopData(currentUser.id);
             }
             return { success: true };
         } catch (err) {
             console.error('Error creating workshop:', err);
+            setError(err.message);
             return { success: false, error: err.message };
         } finally {
             setLoading(false);
@@ -215,7 +231,9 @@ function useGlassStoreInternal() {
 
     // Glass Type CRUD
     const addGlassType = async (type) => {
-        if (!activeWorkshop) return;
+        if (!activeWorkshop) {
+            return { success: false, error: 'لم يتم تحديد الورشة بعد' };
+        }
         const { data, error } = await supabase
             .from('glass_types')
             .insert({ ...type, workshop_id: activeWorkshop.id })
@@ -223,7 +241,9 @@ function useGlassStoreInternal() {
             .single();
         if (!error && data) {
             setGlassTypes(prev => [...prev, data]);
+            return { success: true, data };
         }
+        return { success: false, error: error?.message || 'فشل إضافة الصنف' };
     };
 
     const updateGlassType = async (id, updatedType) => {
@@ -248,7 +268,9 @@ function useGlassStoreInternal() {
 
     // Custom Button CRUD
     const addCustomButton = async (button) => {
-        if (!activeWorkshop) return;
+        if (!activeWorkshop) {
+            return { success: false, error: 'لم يتم تحديد الورشة بعد' };
+        }
         const { data, error } = await supabase
             .from('custom_buttons')
             .insert({ ...button, workshop_id: activeWorkshop.id })
@@ -256,7 +278,9 @@ function useGlassStoreInternal() {
             .single();
         if (!error && data) {
             setCustomButtons(prev => [...prev, data]);
+            return { success: true, data };
         }
+        return { success: false, error: error?.message || 'فشل إضافة الزر' };
     };
 
     const updateCustomButton = async (id, updatedButton) => {
