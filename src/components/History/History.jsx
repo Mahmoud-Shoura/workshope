@@ -4,30 +4,43 @@ import { useGlassStore } from '../../hooks/useGlassStore';
 import './History.css';
 
 export function History() {
-    const { orders, deleteOrder, userRole } = useGlassStore();
+    const { orders, deleteOrder, userRole, printSettings } = useGlassStore();
     const isEmployee = userRole === 'employee';
     const [selectedCustomerName, setSelectedCustomerName] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const formatWhatsAppMessage = (order) => {
-        let message = `*فاتورة زجاج - ${order.customerName || 'عميل'}*\n\n`;
+        const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
+        let message = `*فاتورة حساب - ${order.customerName || 'عميل'}* (${workshopName})\n\n`;
 
         order.items?.forEach((item, index) => {
             message += `${index + 1}. *${item.typeName}*\n`;
-            message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
-            message += `   الكمية: ${item.qty}\n`;
-            message += `   المساحة: ${item.area.toFixed(2)} م²\n`;
+            if (item.isPiece) {
+                if (item.description) {
+                    message += `   الوصف: ${item.description}\n`;
+                }
+                message += `   الكمية: ${item.qty} قطعة\n`;
+            } else {
+                message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
+                message += `   الكمية: ${item.qty}\n`;
+                if (item.isAddLinear) {
+                    const perimeter = ((item.length + item.width) * 2 / 100 * item.qty);
+                    message += `   المساحة: ${item.area.toFixed(2)} م² + ${perimeter.toFixed(2)} م.ط إضافي\n`;
+                } else {
+                    message += `   المساحة/الطول: ${item.area.toFixed(2)} م²\n`;
+                }
+            }
             message += `   السعر: ${item.cost.toFixed(2)} ج.م\n\n`;
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*المساحة الكلية:* ${order.totalArea?.toFixed(2)} م²\n`;
+        message += `*إجمالي المساحة:* ${order.totalArea?.toFixed(2)} م²\n`;
 
         if (order.baseCost !== undefined) {
-            message += `*إجمالي سعر الزجاج:* ${order.baseCost.toFixed(2)} ج.م\n`;
+            message += `*الحساب الأساسي:* ${order.baseCost.toFixed(2)} ج.م\n`;
         } else {
             const computedBase = order.items?.reduce((sum, item) => sum + item.cost, 0) || order.totalCost || 0;
-            message += `*إجمالي سعر الزجاج:* ${computedBase.toFixed(2)} ج.م\n`;
+            message += `*الحساب الأساسي:* ${computedBase.toFixed(2)} ج.م\n`;
         }
 
         if (order.adjustments && order.adjustments.length > 0) {
@@ -46,7 +59,7 @@ export function History() {
         message += `*العربون/المقدم:* ${deposit.toFixed(2)} ج.م\n`;
         message += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
         message += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
-        message += `_شكراً لتعاملكم معنا ورشة الزجاج الحديثة_`;
+        message += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
 
         return message;
     };
@@ -178,8 +191,8 @@ export function History() {
                         <thead>
                             <tr>
                                 <th>التاريخ</th>
-                                <th>الأبعاد والكمية</th>
-                                <th>نوع الزجاج</th>
+                                <th>البيان والقياسات</th>
+                                <th>الصنف / الخامة</th>
                                 <th>تفاصيل الحساب</th>
                                 <th>العربون والمتبقي</th>
                                 <th>إجراءات</th>
@@ -199,7 +212,7 @@ export function History() {
                                             <div className="history-items">
                                                 {order.items?.map((item, idx) => (
                                                     <div key={idx}>
-                                                        {item.length}x{item.width} / {item.qty}
+                                                        {item.isPiece ? (item.description || 'قطعة') : `${item.length}x${item.width}`} / {item.qty} {item.isAddLinear ? `(+ م.ط)` : ''}
                                                     </div>
                                                 ))}
                                             </div>
@@ -218,7 +231,7 @@ export function History() {
                                                 <div className="final-price">{order.totalCost?.toLocaleString()} ج.م</div>
                                                 {order.adjustments && order.adjustments.length > 0 && (
                                                     <div className="adjustments-tooltip">
-                                                        <span>الزجاج: {order.baseCost?.toLocaleString()} ج.م</span>
+                                                        <span>الأساسي: {order.baseCost?.toLocaleString()} ج.م</span>
                                                         {order.adjustments.map((adj, idx) => (
                                                             <span key={idx}>
                                                                 {adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م
@@ -305,7 +318,11 @@ export function History() {
                                     {order.items?.map((item, idx) => (
                                         <div key={idx} className="history-card-item">
                                             <span>{item.typeName}</span>
-                                            <span>{item.length}x{item.width} ({item.qty})</span>
+                                            <span>
+                                                {item.isPiece ? 
+                                                 (item.description || 'قطعة') : 
+                                                 `${item.length}x${item.width}`} ({item.qty}) {item.isAddLinear ? `(+ م.ط)` : ''}
+                                            </span>
                                         </div>
                                     ))}
                                     

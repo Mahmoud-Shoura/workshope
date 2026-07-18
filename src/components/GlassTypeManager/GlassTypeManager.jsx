@@ -143,7 +143,7 @@ export function GlassTypeManager() {
                     disabled={!activeWorkshop}
                     className="btn-add-type"
                 >
-                    <Plus size={16} /> {activeTab === 'types' ? 'إضافة نوع زجاج' : 'إضافة زر مخصص'}
+                    <Plus size={16} /> {activeTab === 'types' ? 'إضافة صنف جديد' : 'إضافة زر مخصص'}
                 </button>
             </div>
 
@@ -153,7 +153,7 @@ export function GlassTypeManager() {
                     onClick={() => { setActiveTab('types'); setIsAdding(false); setEditingId(null); }}
                     className={`inventory-tab ${activeTab === 'types' ? 'active' : ''}`}
                 >
-                    أنواع الزجاج
+                    الأصناف والمخزن
                 </button>
                 <button
                     onClick={() => { setActiveTab('buttons'); setIsAdding(false); setEditingId(null); }}
@@ -168,7 +168,7 @@ export function GlassTypeManager() {
                 <form onSubmit={handleTypeSubmit} className="inventory-form">
                     <div className="inventory-form-grid">
                         <div className="form-field">
-                            <label>اسم صنف الزجاج</label>
+                            <label>اسم صنف المادة/الخامة</label>
                             <input
                                 type="text"
                                 value={formData.name}

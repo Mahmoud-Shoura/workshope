@@ -8,7 +8,7 @@ export function LandingPage({ onGetStarted }) {
             <nav className="landing-nav">
                 <div className="landing-logo-container">
                     <div className="landing-logo">💎</div>
-                    <span className="landing-brand">ورشة الزجاج</span>
+                    <span className="landing-brand">إدارة الورش</span>
                 </div>
                 <button className="landing-nav-btn" onClick={onGetStarted}>دخول / تسجيل</button>
             </nav>
@@ -17,9 +17,9 @@ export function LandingPage({ onGetStarted }) {
             <section className="landing-hero">
                 <div className="landing-hero-content">
                     <span className="landing-badge">🔥 ابدأ مجاناً لمدة 7 أيام بدون كارت ائتمان</span>
-                    <h1 className="landing-title">إدارة حسابات وطلبات <br /><span className="text-gradient">ورش الزجاج بسهولة</span></h1>
+                    <h1 className="landing-title">إدارة حسابات وطلبات <br /><span className="text-gradient">ورش التصنيع بسهولة</span></h1>
                     <p className="landing-subtitle">
-                        نظام متكامل صمم خصيصاً لأصحاب ورش الزجاج لإدارة عمليات تصنيع وتقطيع الزجاج، حساب المساحات، متابعة فواتير العملاء، وإدارة المقبوضات والمدفوعات اليومية بدقة فائقة.
+                        نظام متكامل صمم خصيصاً لأصحاب الورش والمصانع لإدارة عمليات التصنيع والتقطيع، حساب المساحات، متابعة فواتير العملاء، وإدارة المقبوضات والمدفوعات اليومية بدقة فائقة.
                     </p>
                     <div className="landing-cta-group">
                         <button className="landing-cta-primary" onClick={onGetStarted}>ابدأ التجربة المجانية الآن ←</button>
@@ -28,10 +28,10 @@ export function LandingPage({ onGetStarted }) {
                 </div>
                 <div className="landing-hero-visual">
                     <div className="glass-card-3d">
-                        <h3>طلب زجاج رقم #5024</h3>
+                        <h3>طلب توريد رقم #5024</h3>
                         <div className="glass-card-line"></div>
                         <p>العميل: شركة الأمل للمقاولات</p>
-                        <p>النوع: زجاج سيكوريت 10 مم</p>
+                        <p>النوع: صنف قياسي ممتاز 10 مم</p>
                         <p>المقاس: 120 × 240 سم</p>
                         <div className="glass-card-status">قيد التصنيع</div>
                     </div>
@@ -40,12 +40,12 @@ export function LandingPage({ onGetStarted }) {
 
             {/* Features */}
             <section className="landing-features">
-                <h2 className="section-title">لماذا تختار تطبيق ورشة الزجاج؟</h2>
+                <h2 className="section-title">لماذا تختار تطبيق إدارة الورش؟</h2>
                 <div className="features-grid">
                     <div className="feature-card">
                         <div className="feature-icon">📏</div>
                         <h3>حسابات وتقطيع دقيق</h3>
-                        <p>احسب المساحات بالمتر المربع تلقائياً وتفادى هدر خامات الزجاج بفضل حاسبة القياسات الذكية.</p>
+                        <p>احسب المساحات بالمتر المربع تلقائياً وتفادى هدر خامات التشغيل بفضل حاسبة القياسات الذكية.</p>
                     </div>
                     <div className="feature-card">
                         <div className="feature-icon">💸</div>
@@ -114,7 +114,7 @@ export function LandingPage({ onGetStarted }) {
 
             {/* Footer */}
             <footer className="landing-footer">
-                <p>© {new Date().getFullYear()} نظام ورشة الزجاج. جميع الحقوق محفوظة.</p>
+                <p>© {new Date().getFullYear()} نظام إدارة الورش. جميع الحقوق محفوظة.</p>
             </footer>
         </div>
     );

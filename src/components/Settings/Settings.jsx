@@ -17,12 +17,23 @@ export function Settings() {
         createWorkshop
     } = useGlassStore();
 
-    const [workshopName, setWorkshopName] = useState(printSettings?.workshop_name || 'ورشة الزجاج الحديثة');
+    const [workshopName, setWorkshopName] = useState(printSettings?.workshop_name || 'ورشة العمل الحديثة');
     const [ownerName, setOwnerName] = useState(printSettings?.owner_name || '');
     const [taxNumber, setTaxNumber] = useState(printSettings?.tax_number || '');
     const [address, setAddress] = useState(printSettings?.address || '');
     const [phone, setPhone] = useState(printSettings?.phone || '');
-    const [footerNote, setFooterNote] = useState(printSettings?.footer_note || 'نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية');
+    const [footerNote, setFooterNote] = useState(printSettings?.footer_note || 'نشكركم لتعاملكم معنا - ورشة العمل الحديثة للخدمات الفنية');
+    
+    useEffect(() => {
+        if (printSettings) {
+            setWorkshopName(printSettings.workshop_name || 'ورشة العمل الحديثة');
+            setOwnerName(printSettings.owner_name || '');
+            setTaxNumber(printSettings.tax_number || '');
+            setAddress(printSettings.address || '');
+            setPhone(printSettings.phone || '');
+            setFooterNote(printSettings.footer_note || 'نشكركم لتعاملكم معنا - ورشة العمل الحديثة للخدمات الفنية');
+        }
+    }, [printSettings]);
     
     const [savedSuccessfully, setSavedSuccessfully] = useState(false);
     const [showCreateWorkshop, setShowCreateWorkshop] = useState(!activeWorkshop);
@@ -131,7 +142,7 @@ export function Settings() {
                                     type="text"
                                     value={newWorkshopName}
                                     onChange={(e) => setNewWorkshopName(e.target.value)}
-                                    placeholder="مثال: ورشة الأمل للزجاج"
+                                    placeholder="مثال: ورشة الأمل الحديثة"
                                     autoFocus
                                     disabled={workshopLoading}
                                     required
@@ -206,7 +217,7 @@ export function Settings() {
                                     type="text"
                                     value={workshopName}
                                     onChange={(e) => setWorkshopName(e.target.value)}
-                                    placeholder="مثال: مصنع زجاج السلام"
+                                    placeholder="مثال: مصنع السلام الحديث"
                                     required
                                     disabled={userRole === 'employee'}
                                 />
@@ -292,7 +303,7 @@ export function Settings() {
                             <div className="preview-receipt-header">
                                 <h4>{workshopName || 'اسم الورشة'}</h4>
                                 {taxNumber && <p className="tax-badge">الرقم الضريبي: {taxNumber}</p>}
-                                <p className="sub-detail">كشف تفصيلي بمقاسات وحسابات زجاج للعميل</p>
+                                <p className="sub-detail">كشف تفصيلي بالقياسات وحسابات العميل</p>
                                 <div className="header-divider"></div>
                                 <div className="preview-info-row">
                                     <span>العميل: أحمد محمد</span>

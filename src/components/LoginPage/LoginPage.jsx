@@ -98,7 +98,7 @@ export function LoginPage() {
                             </defs>
                         </svg>
                     </div>
-                    <h1 className="login-brand-name">ورشة الزجاج</h1>
+                    <h1 className="login-brand-name">إدارة الورش</h1>
                     <p className="login-brand-sub">نظام إدارة الطلبات والحسابات</p>
                 </div>
 
@@ -131,7 +131,7 @@ export function LoginPage() {
                                     type="text"
                                     value={workshopName}
                                     onChange={e => setWorkshopName(e.target.value)}
-                                    placeholder="مثال: ورشة الأمل للزجاج"
+                                    placeholder="مثال: ورشة الأمل الحديثة"
                                     autoFocus
                                 />
                             </div>

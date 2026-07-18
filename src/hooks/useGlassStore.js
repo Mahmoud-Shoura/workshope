@@ -14,9 +14,9 @@ export function useGlassStore() {
 }
 
 const DEFAULT_GLASS_TYPES = [
-    { name: 'Transparent 6mm', price: 400, unit: 'm2' },
-    { name: 'Fume 6mm', price: 550, unit: 'm2' },
-    { name: 'Sekkurit 10mm', price: 1200, unit: 'm2' },
+    { name: 'صنف قياسي أ (م²)', price: 400, unit: 'm2' },
+    { name: 'صنف قياسي ب (م.ط)', price: 200, unit: 'linear_x2' },
+    { name: 'صنف قياسي ج (قطعة)', price: 150, unit: 'piece' },
 ];
 
 const DEFAULT_CUSTOM_BUTTONS = [
@@ -26,12 +26,12 @@ const DEFAULT_CUSTOM_BUTTONS = [
 ];
 
 const DEFAULT_PRINT_SETTINGS = {
-    workshop_name: 'ورشة الزجاج الحديثة',
+    workshop_name: 'ورشة العمل الحديثة',
     owner_name: '',
     tax_number: '',
     address: '',
     phone: '',
-    footer_note: 'نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية',
+    footer_note: 'نشكركم لتعاملكم معنا - ورشة العمل الحديثة للخدمات الفنية',
 };
 
 function useGlassStoreInternal() {
@@ -414,8 +414,7 @@ function useGlassStoreInternal() {
 
         const { error } = await supabase
             .from('print_settings')
-            .update(dbFields)
-            .eq('workshop_id', activeWorkshop.id);
+            .upsert({ workshop_id: activeWorkshop.id, ...dbFields });
 
         if (!error) {
             setPrintSettings(prev => ({ ...prev, ...dbFields }));

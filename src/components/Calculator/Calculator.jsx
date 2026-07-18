@@ -4,9 +4,9 @@ import { useGlassStore } from '../../hooks/useGlassStore';
 import './Calculator.css';
 
 export function Calculator() {
-    const { glassTypes, customButtons, saveOrder } = useGlassStore();
+    const { glassTypes, customButtons, saveOrder, printSettings } = useGlassStore();
     const [groups, setGroups] = useState([
-        { id: 1, typeId: glassTypes[0]?.id || '', inputText: '' }
+        { id: 1, typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }
     ]);
     const [customerName, setCustomerName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -24,7 +24,7 @@ export function Calculator() {
     });
 
     const addGroup = () => {
-        setGroups([...groups, { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
+        setGroups([...groups, { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }]);
     };
 
     const updateGroup = (id, field, value) => {
@@ -37,9 +37,123 @@ export function Calculator() {
         }
     };
 
-    const parseMeasurementsText = (text) => {
+    const handleAddPieceRow = (groupId) => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        let currentRows = [];
+        try {
+            if (group.inputText.trim()) {
+                currentRows = JSON.parse(group.inputText);
+            }
+            if (!Array.isArray(currentRows)) currentRows = [];
+        } catch (e) {
+            if (group.inputText.trim()) {
+                currentRows = parseMeasurementsText(group.inputText, true).map(r => ({
+                    id: r.id,
+                    desc: r.description,
+                    qty: r.qty
+                }));
+            }
+        }
+        currentRows.push({ id: `${Date.now()}-${Math.random()}`, desc: '', qty: 1 });
+        updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
+    };
+
+    const handlePieceRowChange = (groupId, index, field, value) => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        let currentRows = [];
+        try {
+            if (group.inputText.trim()) {
+                currentRows = JSON.parse(group.inputText);
+            }
+            if (!Array.isArray(currentRows)) currentRows = [];
+        } catch (e) {
+            currentRows = parseMeasurementsText(group.inputText, true).map(r => ({
+                id: r.id,
+                desc: r.description,
+                qty: r.qty
+            }));
+        }
+        if (currentRows[index]) {
+            currentRows[index][field] = value;
+        }
+        updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
+    };
+
+    const handleRemovePieceRow = (groupId, index) => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        let currentRows = [];
+        try {
+            if (group.inputText.trim()) {
+                currentRows = JSON.parse(group.inputText);
+            }
+            if (!Array.isArray(currentRows)) currentRows = [];
+        } catch (e) {
+            currentRows = parseMeasurementsText(group.inputText, true).map(r => ({
+                id: r.id,
+                desc: r.description,
+                qty: r.qty
+            }));
+        }
+        currentRows.splice(index, 1);
+        updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
+    };
+
+    const parseMeasurementsText = (text, isPiece) => {
         if (!text) return [];
-        // Split by newline, comma, semicolon, or plus
+        if (isPiece) {
+            try {
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) {
+                    return data.map((item, index) => ({
+                        id: item.id || `${Date.now()}-${index}-${Math.random()}`,
+                        raw: item.desc || '',
+                        description: item.desc || '',
+                        length: 0,
+                        width: 0,
+                        qty: isNaN(Number(item.qty)) || Number(item.qty) <= 0 ? 1 : Number(item.qty),
+                        isValid: true
+                    }));
+                }
+            } catch (e) {
+                // Fallback if not JSON
+            }
+            // parse line by line
+            const lines = text.split(/[\n,;]+/);
+            const parsed = [];
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const numbers = trimmed.match(/\d+(\.\d+)?/g);
+                if (numbers && numbers.length > 0) {
+                    const qty = parseInt(numbers[numbers.length - 1], 10);
+                    const desc = trimmed.replace(numbers[numbers.length - 1], '').replace(/[*xX:-]/g, '').trim();
+                    parsed.push({
+                        id: `${Date.now()}-${index}-${Math.random()}`,
+                        raw: trimmed,
+                        description: desc || 'بند قطعة',
+                        length: 0,
+                        width: 0,
+                        qty: isNaN(qty) || qty <= 0 ? 1 : qty,
+                        isValid: true
+                    });
+                } else {
+                    parsed.push({
+                        id: `${Date.now()}-${index}-${Math.random()}`,
+                        raw: trimmed,
+                        description: trimmed,
+                        length: 0,
+                        width: 0,
+                        qty: 1,
+                        isValid: true
+                    });
+                }
+            });
+            return parsed;
+        }
+
         const lines = text.split(/[\n,;+]+/);
         const parsed = [];
 
@@ -47,7 +161,6 @@ export function Calculator() {
             const trimmed = line.trim();
             if (!trimmed) return;
 
-            // Find all numeric values (including decimals) in the line
             const numbers = trimmed.match(/\d+(\.\d+)?/g);
             if (numbers && numbers.length >= 2) {
                 const length = parseFloat(numbers[0]);
@@ -75,53 +188,68 @@ export function Calculator() {
         return parsed;
     };
 
-    const calculateRow = (length, width, qty, typeId) => {
+    const calculateRow = (length, width, qty, typeId, isAddLinear, linearPrice) => {
         const type = glassTypes.find(t => t.id === typeId);
-        if (!type) return { area: 0, cost: 0 };
+        if (!type) return { area: 0, cost: 0, extraLinearCost: 0 };
 
         let area = 0;
         let cost = 0;
 
         if (type.unit === 'm2') {
-            // المتر المربع: المساحة بالمتر المربع
             const areaM2 = (length * width) / 10000;
             area = areaM2 * qty;
             cost = area * type.price;
         } else if (type.unit === 'piece') {
-            // بالقطعة: الكمية فقط
-            const areaM2 = (length * width) / 10000;
-            area = areaM2 * qty;
+            area = 0;
             cost = qty * type.price;
         } else if (type.unit === 'linear_x2') {
-            // متر طولي ×2: (الطول + العرض) × 2
-            const linearMeters = ((length + width) * 2) / 100; // تحويل من سم إلى متر
+            const linearMeters = ((length + width) * 2) / 100;
             area = linearMeters * qty;
             cost = area * type.price;
         } else if (type.unit === 'linear_x4') {
-            // متر طولي ×4: (الطول + العرض) × 4
-            const linearMeters = ((length + width) * 4) / 100; // تحويل من سم إلى متر
+            const linearMeters = ((length + width) * 4) / 100;
             area = linearMeters * qty;
             cost = area * type.price;
         }
 
-        return { area, cost };
+        let extraLinearCost = 0;
+        if (isAddLinear && type.unit !== 'piece' && Number(linearPrice) > 0) {
+            const linearMeters = ((length + width) * 2) / 100 * qty;
+            extraLinearCost = linearMeters * Number(linearPrice);
+            cost += extraLinearCost;
+        }
+
+        return { area, cost, extraLinearCost };
     };
 
-    // Flatten all valid items from all groups for global actions
     const getActiveItems = () => {
         const allItems = [];
         adjustedGroups.forEach(group => {
-            const parsed = parseMeasurementsText(group.inputText);
+            const type = glassTypes.find(t => t.id === group.typeId);
+            const isPiece = type?.unit === 'piece';
+            const parsed = parseMeasurementsText(group.inputText, isPiece);
             parsed.forEach(item => {
                 if (item.isValid) {
-                    const { area, cost } = calculateRow(item.length, item.width, item.qty, group.typeId);
+                    const { area, cost, extraLinearCost } = calculateRow(
+                        item.length,
+                        item.width,
+                        item.qty,
+                        group.typeId,
+                        group.isAddLinear,
+                        group.linearPrice
+                    );
                     allItems.push({
                         id: item.id,
                         length: item.length,
                         width: item.width,
                         qty: item.qty,
                         typeId: group.typeId,
-                        typeName: glassTypes.find(t => t.id === group.typeId)?.name || '',
+                        typeName: type?.name || '',
+                        description: item.description || '',
+                        isPiece,
+                        isAddLinear: group.isAddLinear,
+                        linearPrice: Number(group.linearPrice) || 0,
+                        extraLinearCost,
                         area,
                         cost
                     });
@@ -175,25 +303,33 @@ export function Calculator() {
     const totalCostWithAdjustments = baseCost + adjustments.reduce((acc, adj) => acc + adj.amount, 0);
 
     const formatWhatsAppMessage = () => {
-        let message = `*فاتورة زجاج - ${customerName || 'عميل'}*\n\n`;
+        const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
+        let message = `*فاتورة حساب - ${customerName || 'عميل'}* (${workshopName})\n\n`;
 
         activeItems.forEach((item, index) => {
-            const type = glassTypes.find(t => t.id === item.typeId);
-            const unitLabel = type?.unit === 'm2' ? 'م²' :
-                type?.unit === 'piece' ? 'قطعة' :
-                    type?.unit === 'linear_x2' ? 'م.ط' :
-                        'م.ط';
-
             message += `${index + 1}. *${item.typeName}*\n`;
-            message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
-            message += `   الكمية: ${item.qty}\n`;
-            message += `   ${type?.unit === 'piece' ? 'المساحة' : 'الطول'}: ${item.area.toFixed(2)} ${unitLabel}\n`;
+            if (item.isPiece) {
+                if (item.description) {
+                    message += `   الوصف: ${item.description}\n`;
+                }
+                message += `   الكمية: ${item.qty} قطعة\n`;
+            } else {
+                message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
+                message += `   الكمية: ${item.qty}\n`;
+                const unitLabel = glassTypes.find(t => t.id === item.typeId)?.unit === 'm2' ? 'م²' : 'م.ط';
+                if (item.isAddLinear) {
+                    const perimeter = ((item.length + item.width) * 2 / 100 * item.qty);
+                    message += `   المساحة: ${item.area.toFixed(2)} ${unitLabel} + ${perimeter.toFixed(2)} م.ط إضافي\n`;
+                } else {
+                    message += `   المساحة/الطول: ${item.area.toFixed(2)} ${unitLabel}\n`;
+                }
+            }
             message += `   السعر: ${item.cost.toFixed(2)} ج.م\n\n`;
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*المساحة الكلية:* ${totals.area.toFixed(2)} م²\n`;
-        message += `*إجمالي سعر الزجاج:* ${baseCost.toFixed(2)} ج.م\n`;
+        message += `*إجمالي المساحة:* ${totals.area.toFixed(2)} م²\n`;
+        message += `*الحساب الأساسي:* ${baseCost.toFixed(2)} ج.م\n`;
 
         if (adjustments.length > 0) {
             message += `--- الرسوم والخصومات ---\n`;
@@ -211,14 +347,14 @@ export function Calculator() {
         message += `*العربون/المقدم:* ${depositAmount.toFixed(2)} ج.م\n`;
         message += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
         message += `_التاريخ: ${new Date(orderDate).toLocaleDateString('ar-EG')}_\n`;
-        message += `_شكراً لتعاملكم معنا ورشة الزجاج الحديثة_`;
+        message += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
 
         return message;
     };
 
     const handleSendWhatsApp = () => {
         if (!phoneNumber) return alert('برجاء إدخال رقم الهاتف');
-        if (activeItems.length === 0) return alert('برجاء إدخال مقاسات صحيحة أولاً');
+        if (activeItems.length === 0) return alert('برجاء إدخال أصناف أو مقاسات صحيحة أولاً');
 
         const message = formatWhatsAppMessage();
         const phone = phoneNumber.replace(/[^0-9]/g, '');
@@ -229,7 +365,7 @@ export function Calculator() {
 
     const handleSave = () => {
         if (!customerName) return alert('برجاء إدخال اسم العميل');
-        if (activeItems.length === 0) return alert('برجاء إدخال مقاسات صحيحة أولاً');
+        if (activeItems.length === 0) return alert('برجاء إدخال أصناف أو مقاسات صحيحة أولاً');
 
         const now = new Date();
         const selectedDate = new Date(orderDate);
@@ -248,7 +384,7 @@ export function Calculator() {
             date: selectedDate.toISOString()
         });
         alert('تم حفظ الطلب بنجاح!');
-        setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '' }]);
+        setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }]);
         setCustomerName('');
         setPhoneNumber('');
         setDeposit('');
@@ -307,11 +443,13 @@ export function Calculator() {
             {/* Groups Wrapper */}
             <div className="calculator-groups-wrapper no-print">
                 {adjustedGroups.map((group, groupIdx) => {
-                    const parsedRows = parseMeasurementsText(group.inputText);
+                    const type = glassTypes.find(t => t.id === group.typeId);
+                    const isPiece = type?.unit === 'piece';
+                    const parsedRows = parseMeasurementsText(group.inputText, isPiece);
                     
                     const groupSubtotal = parsedRows.reduce((acc, r) => {
                         if (!r.isValid) return acc;
-                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId);
+                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.isAddLinear, group.linearPrice);
                         return { area: acc.area + area, cost: acc.cost + cost };
                     }, { area: 0, cost: 0 });
 
@@ -326,7 +464,7 @@ export function Calculator() {
                                         className="group-type-select"
                                     >
                                         {glassTypes.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name} ({t.price} ج.م / {t.unit === 'm2' ? 'م²' : 'قطعة'})</option>
+                                            <option key={t.id} value={t.id}>{t.name} ({t.price} ج.م / {t.unit === 'm2' ? 'م²' : t.unit === 'piece' ? 'قطعة' : 'م.ط'})</option>
                                         ))}
                                     </select>
                                 </div>
@@ -341,73 +479,193 @@ export function Calculator() {
                             </div>
 
                             <div className="calculator-group-body">
-                                <div className="group-input-section">
-                                    <label className="group-input-label">أدخل المقاسات:</label>
-                                    <textarea
-                                        value={group.inputText}
-                                        onChange={(e) => updateGroup(group.id, 'inputText', e.target.value)}
-                                        placeholder="مثال للتنسيق:&#10;120*80*2 (طول*عرض*عدد)&#10;100*90*1&#10;150x60 (يفترض العدد 1)"
-                                        className="group-textarea"
-                                        rows={5}
-                                    />
-                                    <span className="group-input-hint">
-                                        اكتب المقاسات بالتنسيق: الطول * العرض * العدد (مثال: 120*80*2 أو 120x80x3) وافصل بينها بسطر جديد.
-                                    </span>
-                                </div>
-
-                                <div className="group-preview-section">
-                                    <label className="group-input-label">كشف الحساب للمجموعة:</label>
-                                    {parsedRows.length === 0 ? (
-                                        <div className="preview-empty">
-                                            لا توجد مقاسات صحيحة مدخلة بعد.
-                                        </div>
-                                    ) : (
-                                        <div className="preview-table-wrapper">
-                                            <table className="preview-table">
-                                                <thead>
+                                {isPiece ? (
+                                    <div className="pieces-editor-container" style={{ width: '100%' }}>
+                                        <label className="group-input-label">إدخال بنود القطع:</label>
+                                        <table className="pieces-editor-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
+                                            <thead>
+                                                <tr style={{ textAlign: 'right', borderBottom: '1px solid #ccc' }}>
+                                                    <th style={{ padding: '8px 4px' }}>#</th>
+                                                    <th style={{ padding: '8px 4px' }}>البيان / الوصف (اختياري)</th>
+                                                    <th style={{ padding: '8px 4px', width: '120px' }}>العدد (قطع)</th>
+                                                    <th style={{ padding: '8px 4px' }}>سعر القطعة</th>
+                                                    <th style={{ padding: '8px 4px' }}>الإجمالي</th>
+                                                    <th style={{ padding: '8px 4px', width: '50px' }}>إجراء</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {parsedRows.map((row, idx) => {
+                                                    const itemPrice = type?.price || 0;
+                                                    const totalItemCost = row.qty * itemPrice;
+                                                    return (
+                                                        <tr key={row.id} style={{ borderBottom: '1px solid #eee' }}>
+                                                            <td style={{ padding: '8px 4px' }}>{idx + 1}</td>
+                                                            <td style={{ padding: '8px 4px' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={row.description || ''}
+                                                                    onChange={(e) => handlePieceRowChange(group.id, idx, 'desc', e.target.value)}
+                                                                    placeholder="مثال: مقبض، رف، برواز..."
+                                                                    className="piece-desc-input"
+                                                                    style={{ width: '100%', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '8px 4px' }}>
+                                                                <input
+                                                                    type="number"
+                                                                    value={row.qty}
+                                                                    onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', parseInt(e.target.value, 10) || 1)}
+                                                                    min="1"
+                                                                    className="piece-qty-input"
+                                                                    style={{ width: '80px', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                                                />
+                                                            </td>
+                                                            <td style={{ padding: '8px 4px' }}>{itemPrice.toLocaleString()} ج.م</td>
+                                                            <td style={{ padding: '8px 4px', fontWeight: 'bold' }}>{totalItemCost.toLocaleString()} ج.م</td>
+                                                            <td style={{ padding: '8px 4px' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemovePieceRow(group.id, idx)}
+                                                                    className="btn-delete-small"
+                                                                    style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}
+                                                                >
+                                                                    <Trash size={16} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                {parsedRows.length === 0 && (
                                                     <tr>
-                                                        <th>#</th>
-                                                        <th>المقاس (سم)</th>
-                                                        <th>العدد</th>
-                                                        <th>المساحة</th>
-                                                        <th>السعر (ج.م)</th>
+                                                        <td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: '#666' }}>
+                                                            لا توجد بنود مدخلة بعد. اضغط على الزر بالأسفل لإضافة قطعة.
+                                                        </td>
                                                     </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {parsedRows.map((r, rIdx) => {
-                                                        if (!r.isValid) {
-                                                            return (
-                                                                <tr key={r.id} className="preview-row-invalid">
-                                                                    <td>{rIdx + 1}</td>
-                                                                    <td colSpan={4} className="error-text">
-                                                                        تنسيق غير مدعوم: "{r.raw}"
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        }
-                                                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId);
-                                                        return (
-                                                            <tr key={r.id} className="preview-row-valid">
-                                                                <td>{rIdx + 1}</td>
-                                                                <td>{r.length} × {r.width}</td>
-                                                                <td>{r.qty}</td>
-                                                                <td>{area.toFixed(2)}</td>
-                                                                <td>{cost.toFixed(2)}</td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddPieceRow(group.id)}
+                                            className="btn-add-piece-row-action"
+                                            style={{
+                                                marginTop: '12px',
+                                                padding: '8px 12px',
+                                                background: '#1976d2',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}
+                                        >
+                                            <Plus size={14} /> إضافة بند قطعة جديد
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="group-input-section" style={{ width: '100%' }}>
+                                            <div className="dual-calc-toggle-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                                                <label className="group-input-label">أدخل المقاسات:</label>
+                                                <div className="linear-add-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={group.isAddLinear || false}
+                                                            onChange={(e) => updateGroup(group.id, 'isAddLinear', e.target.checked)}
+                                                        />
+                                                        <span>إضافة حساب متر طولي لهذا المقاس</span>
+                                                    </label>
+                                                    {group.isAddLinear && (
+                                                        <div className="linear-price-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <span className="price-input-prefix" style={{ fontSize: '14px' }}>سعر م.ط:</span>
+                                                            <input 
+                                                                type="number"
+                                                                value={group.linearPrice || ''}
+                                                                onChange={(e) => updateGroup(group.id, 'linearPrice', e.target.value)}
+                                                                placeholder="ج.م"
+                                                                className="linear-price-input"
+                                                                style={{ width: '85px', padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                                                min="0"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <textarea
+                                                value={group.inputText}
+                                                onChange={(e) => updateGroup(group.id, 'inputText', e.target.value)}
+                                                placeholder="مثال للتنسيق:&#10;120*80*2 (طول*عرض*عدد)&#10;100*90*1&#10;150x60 (يفترض العدد 1)"
+                                                className="group-textarea"
+                                                rows={5}
+                                            />
+                                            <span className="group-input-hint">
+                                                اكتب المقاسات بالتنسيق: الطول * العرض * العدد (مثال: 120*80*2 أو 120x80x3) وافصل بينها بسطر جديد.
+                                            </span>
                                         </div>
-                                    )}
-                                </div>
+
+                                        <div className="group-preview-section" style={{ width: '100%', marginTop: '16px' }}>
+                                            <label className="group-input-label">كشف الحساب للمجموعة:</label>
+                                            {parsedRows.length === 0 ? (
+                                                <div className="preview-empty">
+                                                    لا توجد مقاسات صحيحة مدخلة بعد.
+                                                </div>
+                                            ) : (
+                                                <div className="preview-table-wrapper">
+                                                    <table className="preview-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>المقاس (سم)</th>
+                                                                <th>العدد</th>
+                                                                <th>المساحة ({type?.unit === 'm2' ? 'م²' : 'م.ط'})</th>
+                                                                {group.isAddLinear && <th>م.ط إضافي</th>}
+                                                                <th>السعر (ج.م)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {parsedRows.map((r, rIdx) => {
+                                                                if (!r.isValid) {
+                                                                    return (
+                                                                        <tr key={r.id} className="preview-row-invalid">
+                                                                            <td>{rIdx + 1}</td>
+                                                                            <td colSpan={group.isAddLinear ? 5 : 4} className="error-text">
+                                                                                تنسيق غير مدعوم: "{r.raw}"
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                }
+                                                                const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.isAddLinear, group.linearPrice);
+                                                                const rowPerimeter = ((r.length + r.width) * 2 / 100) * r.qty;
+                                                                return (
+                                                                    <tr key={r.id} className="preview-row-valid">
+                                                                        <td>{rIdx + 1}</td>
+                                                                        <td>{r.length} × {r.width}</td>
+                                                                        <td>{r.qty}</td>
+                                                                        <td>{area.toFixed(2)}</td>
+                                                                        {group.isAddLinear && <td>{rowPerimeter.toFixed(2)} م.ط</td>}
+                                                                        <td>{cost.toFixed(2)}</td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="calculator-group-footer">
                                 <div className="group-subtotals">
-                                    <span className="subtotal-item">
-                                        المساحة: <strong>{groupSubtotal.area.toFixed(2)} م²</strong>
-                                    </span>
+                                    {!isPiece && (
+                                        <span className="subtotal-item">
+                                            المساحة: <strong>{groupSubtotal.area.toFixed(2)} م²</strong>
+                                        </span>
+                                    )}
                                     <span className="subtotal-item">
                                         السعر: <strong>{groupSubtotal.cost.toFixed(2)} ج.م</strong>
                                     </span>
@@ -473,7 +731,7 @@ export function Calculator() {
             <div className="calculator-footer no-print">
                 <button onClick={addGroup} className="btn-add-row">
                     <Plus size={16} />
-                    إضافة مجموعة زجاج
+                    إضافة مجموعة جديدة
                 </button>
 
                 <div className="calculator-totals">
@@ -483,7 +741,7 @@ export function Calculator() {
                     </div>
                     {adjustments.length > 0 && (
                         <div className="total-item base-cost-item">
-                            <span className="total-label">سعر الزجاج:</span>
+                            <span className="total-label">الحساب الأساسي:</span>
                             <span className="total-value-small">{baseCost.toFixed(2)} ج.م</span>
                         </div>
                     )}
@@ -521,8 +779,8 @@ export function Calculator() {
 
                         <div className="sheet-content">
                             <div className="sheet-print-title">
-                                <h2>ورشة الزجاج الحديثة</h2>
-                                <p>كشف تفصيلي بمقاسات وحسابات زجاج للعميل</p>
+                                <h2>{printSettings?.workshop_name || 'ورشة العمل الحديثة'}</h2>
+                                <p>{printSettings?.tax_number ? `الرقم الضريبي: ${printSettings.tax_number}` : 'كشف تفصيلي بالقياسات وحسابات العميل'}</p>
                             </div>
 
                             <div className="sheet-info-grid">
@@ -530,11 +788,21 @@ export function Calculator() {
                                     <strong>اسم العميل:</strong> {customerName || 'عميل نقدي'}
                                 </div>
                                 <div>
-                                    <strong>رقم الهاتف:</strong> {phoneNumber || '-'}
+                                    <strong>رقم الهاتف:</strong> {phoneNumber || printSettings?.phone || '-'}
                                 </div>
                                 <div>
                                     <strong>التاريخ:</strong> {new Date(orderDate).toLocaleDateString('ar-EG')}
                                 </div>
+                                {printSettings?.address && (
+                                    <div style={{ gridColumn: 'span 2' }}>
+                                        <strong>العنوان:</strong> {printSettings.address}
+                                    </div>
+                                )}
+                                {printSettings?.owner_name && (
+                                    <div>
+                                        <strong>صاحب العمل:</strong> {printSettings.owner_name}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Desktop Wide Landscape Sheet (Excel style) */}
@@ -543,11 +811,11 @@ export function Calculator() {
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>نوع الزجاج (الصنف)</th>
+                                            <th>الصنف / الخامة</th>
                                             <th>الطول (سم)</th>
                                             <th>العرض (سم)</th>
                                             <th>العدد</th>
-                                            <th>المساحة (م² / طولي)</th>
+                                            <th>المساحة / الوصف</th>
                                             <th>السعر (ج.م)</th>
                                         </tr>
                                     </thead>
@@ -556,10 +824,14 @@ export function Calculator() {
                                             <tr key={item.id}>
                                                 <td>{idx + 1}</td>
                                                 <td>{item.typeName}</td>
-                                                <td>{item.length}</td>
-                                                <td>{item.width}</td>
+                                                <td>{item.isPiece ? '-' : item.length}</td>
+                                                <td>{item.isPiece ? '-' : item.width}</td>
                                                 <td>{item.qty}</td>
-                                                <td>{item.area.toFixed(2)}</td>
+                                                <td>
+                                                    {item.isPiece ? (item.description || 'بالقطعة') : 
+                                                     item.isAddLinear ? `${item.area.toFixed(2)} م² + ${((item.length + item.width) * 2 / 100 * item.qty).toFixed(2)} م.ط` : 
+                                                     `${item.area.toFixed(2)}`}
+                                                </td>
                                                 <td>{item.cost.toFixed(2)}</td>
                                             </tr>
                                         ))}
@@ -576,10 +848,24 @@ export function Calculator() {
                                             <span className="item-type">{item.typeName}</span>
                                         </div>
                                         <div className="item-details">
-                                            <div><span>الطول:</span> <span>{item.length} سم</span></div>
-                                            <div><span>العرض:</span> <span>{item.width} سم</span></div>
-                                            <div><span>العدد:</span> <span>{item.qty}</span></div>
-                                            <div><span>المساحة:</span> <span>{item.area.toFixed(2)} م²</span></div>
+                                            {item.isPiece ? (
+                                                <>
+                                                    {item.description && <div><span>البيان:</span> <span>{item.description}</span></div>}
+                                                    <div><span>الكمية:</span> <span>{item.qty} قطعة</span></div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div><span>الطول:</span> <span>{item.length} سم</span></div>
+                                                    <div><span>العرض:</span> <span>{item.width} سم</span></div>
+                                                    <div><span>العدد:</span> <span>{item.qty}</span></div>
+                                                    <div>
+                                                        <span>المساحة:</span> 
+                                                        <span>
+                                                            {item.isAddLinear ? `${item.area.toFixed(2)} م² + ${((item.length + item.width) * 2 / 100 * item.qty).toFixed(2)} م.ط` : `${item.area.toFixed(2)}`}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div><span>السعر:</span> <span>{item.cost.toFixed(2)} ج.م</span></div>
                                         </div>
                                     </div>
@@ -588,11 +874,11 @@ export function Calculator() {
 
                             <div className="sheet-totals">
                                 <div className="totals-row">
-                                    <span>إجمالي المساحة الكلية:</span>
+                                    <span>إجمالي المساحة:</span>
                                     <strong>{totals.area.toFixed(2)} م²</strong>
                                 </div>
                                 <div className="totals-row">
-                                    <span>إجمالي سعر الزجاج:</span>
+                                    <span>الحساب الأساسي:</span>
                                     <strong>{baseCost.toFixed(2)} ج.م</strong>
                                 </div>
                                 {adjustments.map(adj => (
@@ -611,12 +897,12 @@ export function Calculator() {
                                 </div>
                                 <div className="totals-row sheet-remaining-row" style={{ fontWeight: 'bold' }}>
                                     <span>المتبقي للاستلام:</span>
-                                    <strong style={{ color: '#c62828' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.m</strong>
+                                    <strong style={{ color: '#c62828' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.م</strong>
                                 </div>
                             </div>
 
                             <div className="sheet-footer-note">
-                                <p>نشكركم لتعاملكم معنا - ورشة الزجاج الحديثة للخدمات الفنية</p>
+                                <p>{printSettings?.footer_note || `نشكركم لتعاملكم معنا - ${printSettings?.workshop_name || 'ورشة العمل الحديثة'}`}</p>
                             </div>
                         </div>
                     </div>

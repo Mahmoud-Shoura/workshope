@@ -144,7 +144,7 @@ export function SubscriptionBlock() {
                                 {paymentMethod === 'instapay' ? (
                                     <div className="instructions-box">
                                         <p>يرجى تحويل مبلغ <strong>{PLANS[selectedPlan].price} جنيه</strong> إلى عنوان انستا باي التالي:</p>
-                                        <p className="payment-ref"><strong>glassworkshop@instapay</strong></p>
+                                        <p className="payment-ref"><strong>workshop@instapay</strong></p>
                                     </div>
                                 ) : (
                                     <div className="instructions-box">

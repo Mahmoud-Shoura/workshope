@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut, Settings } from 'lucide-react';
 import { useTheme } from '../ThemeProvider/ThemeProvider';
+import { useGlassStore } from '../../hooks/useGlassStore';
 import './Layout.css';
 
 // Declare NavItem as a static helper component outside of Layout to comply with react-hooks/static-components
@@ -22,6 +23,7 @@ function NavItem({ view, icon: Icon, label, currentView, onViewChange, setSideba
 export function Layout({ children, currentView, onViewChange }) {
     const [isSidebarOpen, setSidebarOpen] = React.useState(false);
     const { theme, toggleTheme } = useTheme();
+    const { printSettings } = useGlassStore();
     const [exitConfirmCount, setExitConfirmCount] = React.useState(0);
     const [showExitToast, setShowExitToast] = React.useState(false);
 
@@ -59,7 +61,7 @@ export function Layout({ children, currentView, onViewChange }) {
             {/* Sidebar */}
             <aside className={`layout-sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="layout-sidebar-header">
-                    نظام إدارة
+                    {printSettings?.workshop_name || 'نظام إدارة الورش'}
                 </div>
                 <div className="layout-sidebar-nav">
                     <NavItem 
