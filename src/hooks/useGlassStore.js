@@ -135,8 +135,22 @@ function useGlassStoreInternal() {
 
             if (subError) throw subError;
 
-            // Check if trial has ended
-            if (subData) {
+            // VIP / Admin emails list for lifetime trial access
+            const VIP_EMAILS = ['mahmoudhameidshoura@gmail.com'];
+            const { data: { user: currentUserData } } = await supabase.auth.getUser();
+            const userEmail = currentUserData?.email || currentUser?.email;
+            const isVipUser = userEmail && VIP_EMAILS.includes(userEmail.toLowerCase());
+
+            if (isVipUser) {
+                setSubscription({
+                    id: subData?.id || 'vip-lifetime-sub',
+                    workshop_id: wId,
+                    plan_id: 'lifetime',
+                    status: 'active',
+                    end_date: '2099-12-31T23:59:59.000Z',
+                    created_at: subData?.created_at || new Date().toISOString()
+                });
+            } else if (subData) {
                 const now = new Date();
                 const endDate = new Date(subData.end_date);
                 if (now > endDate && subData.status !== 'expired') {
@@ -431,7 +445,10 @@ function useGlassStoreInternal() {
             if (error) throw error;
             return { success: true, user: data.user };
         } catch (err) {
-            return { success: false, error: err.message };
+            const message = err.message === 'Failed to fetch'
+                ? 'فشل الاتصال بخادم Supabase. يرجى التأكد من صحة VITE_SUPABASE_URL في ملف .env.local والاتصال بالإنترنت.'
+                : err.message;
+            return { success: false, error: message };
         }
     };
 
@@ -444,7 +461,10 @@ function useGlassStoreInternal() {
             if (error) throw error;
             return { success: true, user: data.user };
         } catch (err) {
-            return { success: false, error: err.message };
+            const message = err.message === 'Failed to fetch'
+                ? 'فشل الاتصال بخادم Supabase. يرجى التأكد من صحة VITE_SUPABASE_URL في ملف .env.local والاتصال بالإنترنت.'
+                : err.message;
+            return { success: false, error: message };
         }
     };
 

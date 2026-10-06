@@ -67,8 +67,12 @@ function AppContent() {
     return <LoginPage />;
   }
 
+  // VIP / Admin emails list for lifetime trial access
+  const VIP_EMAILS = ['mahmoudhameidshoura@gmail.com'];
+  const isVipUser = currentUser?.email && VIP_EMAILS.includes(currentUser.email.toLowerCase());
+
   // If subscription has expired, prompt to pay
-  if (subscription?.status === 'expired') {
+  if (subscription?.status === 'expired' && !isVipUser) {
     return <SubscriptionBlock />;
   }
 

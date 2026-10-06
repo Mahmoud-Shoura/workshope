@@ -409,10 +409,10 @@ export function Settings() {
                         <div className="current-sub-info">
                             <p>حالة الاشتراك الحالي: 
                                 <strong className={`sub-status ${subscription?.status}`}>
-                                    {subscription?.status === 'trial' ? 'فترة تجريبية' : subscription?.status === 'active' ? 'نشط' : 'منتهي'}
+                                    {subscription?.plan_id === 'lifetime' ? 'نشط (مدى الحياة - حساب الأدمن)' : subscription?.status === 'trial' ? 'فترة تجريبية' : subscription?.status === 'active' ? 'نشط' : 'منتهي'}
                                 </strong>
                             </p>
-                            <p>تاريخ انتهاء الاشتراك: <strong>{subscription ? new Date(subscription.end_date).toLocaleDateString('ar-EG') : 'غير متوفر'}</strong></p>
+                            <p>تاريخ انتهاء الاشتراك: <strong>{subscription?.plan_id === 'lifetime' ? 'مدى الحياة (غير منتهٍ)' : subscription ? new Date(subscription.end_date).toLocaleDateString('ar-EG') : 'غير متوفر'}</strong></p>
                         </div>
 
                         <div className="pending-payments-list">
