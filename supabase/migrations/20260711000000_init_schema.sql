@@ -230,6 +230,7 @@ CREATE POLICY "Owners can create payments (request review)" ON payments
             FROM subscriptions s 
             WHERE s.workshop_id IN (
                 SELECT wm.workshop_id 
+                FROM workshop_members wm
                 WHERE wm.user_id = auth.uid() AND wm.role = 'owner'
             )
         )

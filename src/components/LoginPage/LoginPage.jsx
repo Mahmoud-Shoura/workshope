@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './LoginPage.css';
 
@@ -73,9 +73,11 @@ export function LoginPage() {
     };
 
     // If user logged in but has no workshop (and not in create_workshop mode already)
-    if (currentUser && !activeWorkshop && mode !== 'create_workshop') {
-        setMode('create_workshop');
-    }
+    useEffect(() => {
+        if (currentUser && !activeWorkshop && !storeLoading && mode !== 'create_workshop') {
+            setMode('create_workshop');
+        }
+    }, [currentUser, activeWorkshop, storeLoading]);
 
     return (
         <div className="login-overlay">

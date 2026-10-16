@@ -11,7 +11,14 @@ export function History() {
 
     const formatWhatsAppMessage = (order) => {
         const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
-        let message = `*فاتورة حساب - ${order.customerName || 'عميل'}* (${workshopName})\n\n`;
+        // Support both snake_case (from DB) and camelCase (legacy)
+        const customerName = order.customer_name || order.customerName || 'عميل';
+        const totalCost = order.total_cost || order.totalCost || 0;
+        const deposit = order.deposit || 0;
+        const remaining = order.remaining_balance !== undefined ? order.remaining_balance
+            : (order.remainingBalance !== undefined ? order.remainingBalance : (totalCost - deposit));
+
+        let message = `*فاتورة حساب - ${customerName}* (${workshopName})\n\n`;
 
         order.items?.forEach((item, index) => {
             message += `${index + 1}. *${item.typeName}*\n`;
@@ -34,13 +41,15 @@ export function History() {
         });
 
         message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*إجمالي المساحة:* ${order.totalArea?.toFixed(2)} م²\n`;
+        const totalArea = order.totalArea || order.total_area;
+        if (totalArea) message += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
 
-        if (order.baseCost !== undefined) {
-            message += `*الحساب الأساسي:* ${order.baseCost.toFixed(2)} ج.م\n`;
+        const baseCost = order.baseCost || order.base_cost;
+        if (baseCost !== undefined) {
+            message += `*الحساب الأساسي:* ${Number(baseCost).toFixed(2)} ج.م\n`;
         } else {
-            const computedBase = order.items?.reduce((sum, item) => sum + item.cost, 0) || order.totalCost || 0;
-            message += `*الحساب الأساسي:* ${computedBase.toFixed(2)} ج.م\n`;
+            const computedBase = order.items?.reduce((sum, item) => sum + item.cost, 0) || totalCost;
+            message += `*الحساب الأساسي:* ${Number(computedBase).toFixed(2)} ج.م\n`;
         }
 
         if (order.adjustments && order.adjustments.length > 0) {
@@ -52,12 +61,9 @@ export function History() {
             message += `━━━━━━━━━━━━━━━━\n`;
         }
 
-        const deposit = order.deposit || 0;
-        const remaining = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalCost - deposit);
-
-        message += `*الإجمالي المطلوب:* ${order.totalCost?.toFixed(2)} ج.م\n`;
-        message += `*العربون/المقدم:* ${deposit.toFixed(2)} ج.م\n`;
-        message += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
+        message += `*الإجمالي المطلوب:* ${Number(totalCost).toFixed(2)} ج.م\n`;
+        message += `*العربون/المقدم:* ${Number(deposit).toFixed(2)} ج.م\n`;
+        message += `*المتبقي للاستلام:* ${Number(remaining).toFixed(2)} ج.م\n\n`;
         message += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
         message += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
 
@@ -65,14 +71,15 @@ export function History() {
     };
 
     const handleSendWhatsApp = (order) => {
-        if (!order.phoneNumber) {
+        const phone = order.customer_phone || order.phoneNumber;
+        if (!phone) {
             alert('لا يوجد رقم هاتف محفوظ لهذا الطلب');
             return;
         }
 
         const message = formatWhatsAppMessage(order);
-        const phone = order.phoneNumber.replace(/[^0-9]/g, '');
-        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 
         window.open(whatsappUrl, '_blank');
     };
@@ -89,13 +96,20 @@ export function History() {
         const groups = {};
 
         orders.forEach(order => {
-            const rawName = (order.customerName || '').trim();
+            // Support both snake_case (from DB) and camelCase (legacy)
+            const rawName = (order.customer_name || order.customerName || '').trim();
             const name = rawName || 'عميل نقدي / بدون اسم';
+            const phone = order.customer_phone || order.phoneNumber || '';
+            const totalCost = Number(order.total_cost || order.totalCost || 0);
+            const dep = Number(order.deposit || 0);
+            const remaining = order.remaining_balance !== undefined ? Number(order.remaining_balance)
+                : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
+
             if (!groups[name]) {
                 groups[name] = {
                     customerName: name,
                     isNameless: !rawName,
-                    phoneNumber: order.phoneNumber || '',
+                    phoneNumber: phone,
                     ordersCount: 0,
                     totalCost: 0,
                     totalDeposit: 0,
@@ -104,14 +118,13 @@ export function History() {
                 };
             }
             groups[name].ordersCount += 1;
-            groups[name].totalCost += order.totalCost || 0;
-            const dep = order.deposit || 0;
+            groups[name].totalCost += totalCost;
             groups[name].totalDeposit += dep;
-            groups[name].totalRemaining += (order.remainingBalance !== undefined ? order.remainingBalance : (order.totalCost - dep));
+            groups[name].totalRemaining += remaining;
             groups[name].orders.push(order);
 
-            if (order.phoneNumber && !groups[name].phoneNumber) {
-                groups[name].phoneNumber = order.phoneNumber;
+            if (phone && !groups[name].phoneNumber) {
+                groups[name].phoneNumber = phone;
             }
         });
 
@@ -200,8 +213,12 @@ export function History() {
                         </thead>
                         <tbody>
                             {sortedOrders.map((order) => {
-                                const dep = order.deposit || 0;
-                                const rem = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalCost - dep);
+                                const totalCost = Number(order.total_cost || order.totalCost || 0);
+                                const dep = Number(order.deposit || 0);
+                                const rem = order.remaining_balance !== undefined ? Number(order.remaining_balance)
+                                    : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
+                                const phone = order.customer_phone || order.phoneNumber;
+                                const baseCost = order.baseCost || order.base_cost;
                                 return (
                                     <tr key={order.id}>
                                         <td className="history-date">
@@ -228,10 +245,10 @@ export function History() {
                                         </td>
                                         <td>
                                             <div className="price-breakdown">
-                                                <div className="final-price">{order.totalCost?.toLocaleString()} ج.م</div>
+                                                <div className="final-price">{totalCost.toLocaleString()} ج.م</div>
                                                 {order.adjustments && order.adjustments.length > 0 && (
                                                     <div className="adjustments-tooltip">
-                                                        <span>الأساسي: {order.baseCost?.toLocaleString()} ج.م</span>
+                                                        <span>الأساسي: {Number(baseCost || 0).toLocaleString()} ج.م</span>
                                                         {order.adjustments.map((adj, idx) => (
                                                             <span key={idx}>
                                                                 {adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م
@@ -252,8 +269,8 @@ export function History() {
                                                 <button
                                                     onClick={() => handleSendWhatsApp(order)}
                                                     className="btn-whatsapp-small"
-                                                    disabled={!order.phoneNumber}
-                                                    title={order.phoneNumber ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
+                                                    disabled={!phone}
+                                                    title={phone ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
                                                 >
                                                     <MessageCircle size={16} />
                                                 </button>
@@ -278,8 +295,11 @@ export function History() {
                 {/* Mobile View */}
                 <div className="history-mobile-cards">
                     {sortedOrders.map((order) => {
-                        const dep = order.deposit || 0;
-                        const rem = order.remainingBalance !== undefined ? order.remainingBalance : (order.totalCost - dep);
+                        const totalCost = Number(order.total_cost || order.totalCost || 0);
+                        const dep = Number(order.deposit || 0);
+                        const rem = order.remaining_balance !== undefined ? Number(order.remaining_balance)
+                            : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
+                        const phone = order.customer_phone || order.phoneNumber;
                         return (
                             <div key={order.id} className="history-card">
                                 <div className="history-card-header">
@@ -290,14 +310,14 @@ export function History() {
                                     </div>
                                     <div className="history-card-header-actions">
                                         <div className="history-card-price">
-                                            {order.totalCost?.toLocaleString()} ج.م
+                                            {totalCost.toLocaleString()} ج.م
                                         </div>
                                         <div className="actions-flex">
                                             <button
                                                 onClick={() => handleSendWhatsApp(order)}
                                                 className="btn-whatsapp-card"
-                                                disabled={!order.phoneNumber}
-                                                title={order.phoneNumber ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
+                                                disabled={!phone}
+                                                title={phone ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
                                             >
                                                 <MessageCircle size={18} />
                                             </button>
