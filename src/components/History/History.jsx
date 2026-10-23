@@ -1,93 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ArrowRight, Trash2, Search, User, Calendar, DollarSign } from 'lucide-react';
+import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2 } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './History.css';
 
-export function History() {
+// Key used to pass order data to Calculator for editing (avoids race condition with CustomEvent)
+const EDIT_ORDER_KEY = 'edit_order_pending';
+
+export function History({ onViewChange }) {
     const { orders, deleteOrder, userRole, printSettings } = useGlassStore();
     const isEmployee = userRole === 'employee';
     const [selectedCustomerName, setSelectedCustomerName] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const formatWhatsAppMessage = (order) => {
+    /* ── WhatsApp phone formatter ─ handles Egyptian numbers without country code ── */
+    const formatPhone = (raw) => {
+        if (!raw) return null;
+        let phone = raw.replace(/[^0-9+]/g, '');
+        // Egyptian mobile starts with 01 → replace leading 0 with 20
+        if (phone.startsWith('0') && !phone.startsWith('00')) {
+            phone = '20' + phone.slice(1);
+        }
+        phone = phone.replace(/^\+/, '');
+        return phone || null;
+    };
+
+    const buildWhatsAppMessage = (order) => {
         const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
-        // Support both snake_case (from DB) and camelCase (legacy)
         const customerName = order.customer_name || order.customerName || 'عميل';
-        const totalCost = order.total_cost || order.totalCost || 0;
-        const deposit = order.deposit || 0;
-        const remaining = order.remaining_balance !== undefined ? order.remaining_balance
-            : (order.remainingBalance !== undefined ? order.remainingBalance : (totalCost - deposit));
+        const totalCost   = Number(order.total_cost   || order.totalCost   || 0);
+        const dep         = Number(order.deposit || 0);
+        const remaining   = order.remaining_balance !== undefined
+            ? Number(order.remaining_balance)
+            : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : totalCost - dep);
 
-        let message = `*فاتورة حساب - ${customerName}* (${workshopName})\n\n`;
+        let msg = `*فاتورة حساب - ${customerName}* (${workshopName})\n\n`;
 
-        order.items?.forEach((item, index) => {
-            message += `${index + 1}. *${item.typeName}*\n`;
+        (order.items || []).forEach((item, i) => {
+            msg += `${i + 1}. *${item.typeName}*\n`;
             if (item.isPiece) {
-                if (item.description) {
-                    message += `   الوصف: ${item.description}\n`;
-                }
-                message += `   الكمية: ${item.qty} قطعة\n`;
+                if (item.description) msg += `   الوصف: ${item.description}\n`;
+                msg += `   الكمية: ${item.qty} قطعة\n`;
             } else {
-                message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
-                message += `   الكمية: ${item.qty}\n`;
+                msg += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
+                msg += `   الكمية: ${item.qty}\n`;
                 if (item.isAddLinear) {
-                    const perimeter = ((item.length + item.width) * 2 / 100 * item.qty);
-                    message += `   المساحة: ${item.area.toFixed(2)} م² + ${perimeter.toFixed(2)} م.ط إضافي\n`;
+                    const perim = ((item.length + item.width) * 2 / 100 * item.qty);
+                    msg += `   المساحة: ${Number(item.area).toFixed(2)} م² + ${perim.toFixed(2)} م.ط إضافي\n`;
                 } else {
-                    message += `   المساحة/الطول: ${item.area.toFixed(2)} م²\n`;
+                    msg += `   المساحة/الطول: ${Number(item.area).toFixed(2)} م²\n`;
                 }
             }
-            message += `   السعر: ${item.cost.toFixed(2)} ج.م\n\n`;
+            msg += `   السعر: ${Number(item.cost).toFixed(2)} ج.م\n\n`;
         });
 
-        message += `━━━━━━━━━━━━━━━━\n`;
-        const totalArea = order.totalArea || order.total_area;
-        if (totalArea) message += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
+        msg += `━━━━━━━━━━━━━━━━\n`;
+        const baseCost  = order.base_cost  ?? order.baseCost;
+        const totalArea = order.total_area ?? order.totalArea;
+        if (totalArea)       msg += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
+        if (baseCost != null) msg += `*الحساب الأساسي:* ${Number(baseCost).toFixed(2)} ج.م\n`;
 
-        const baseCost = order.baseCost || order.base_cost;
-        if (baseCost !== undefined) {
-            message += `*الحساب الأساسي:* ${Number(baseCost).toFixed(2)} ج.م\n`;
-        } else {
-            const computedBase = order.items?.reduce((sum, item) => sum + item.cost, 0) || totalCost;
-            message += `*الحساب الأساسي:* ${Number(computedBase).toFixed(2)} ج.م\n`;
-        }
-
-        if (order.adjustments && order.adjustments.length > 0) {
-            message += `--- الرسوم والخصومات ---\n`;
+        if (order.adjustments?.length) {
+            msg += `--- الرسوم والخصومات ---\n`;
             order.adjustments.forEach(adj => {
-                const prefix = adj.amount >= 0 ? '+' : '';
-                message += `${adj.name}: ${prefix}${adj.amount.toFixed(2)} ج.م\n`;
+                const sign = adj.amount >= 0 ? '+' : '';
+                msg += `${adj.name}: ${sign}${Number(adj.amount).toFixed(2)} ج.م\n`;
             });
-            message += `━━━━━━━━━━━━━━━━\n`;
+            msg += `━━━━━━━━━━━━━━━━\n`;
         }
 
-        message += `*الإجمالي المطلوب:* ${Number(totalCost).toFixed(2)} ج.م\n`;
-        message += `*العربون/المقدم:* ${Number(deposit).toFixed(2)} ج.م\n`;
-        message += `*المتبقي للاستلام:* ${Number(remaining).toFixed(2)} ج.م\n\n`;
-        message += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
-        message += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
-
-        return message;
+        msg += `*الإجمالي المطلوب:* ${totalCost.toFixed(2)} ج.م\n`;
+        msg += `*العربون/المقدم:* ${dep.toFixed(2)} ج.م\n`;
+        msg += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
+        msg += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
+        msg += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
+        return msg;
     };
 
     const handleSendWhatsApp = (order) => {
-        const phone = order.customer_phone || order.phoneNumber;
+        const rawPhone = order.customer_phone || order.phoneNumber;
+        const phone = formatPhone(rawPhone);
         if (!phone) {
             alert('لا يوجد رقم هاتف محفوظ لهذا الطلب');
             return;
         }
-
-        const message = formatWhatsAppMessage(order);
-        const cleanPhone = phone.replace(/[^0-9]/g, '');
-        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-
-        window.open(whatsappUrl, '_blank');
+        const msg = buildWhatsAppMessage(order);
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
     const handleDeleteOrder = (id) => {
-        if (window.confirm('هل أنت متأكد من رغبتك في حذف هذه المعاملة نهائياً من السجل؟')) {
+        if (window.confirm('هل أنت متأكد من رغبتك في حذف هذه الفاتورة نهائياً؟')) {
             deleteOrder(id);
         }
+    };
+
+    /* ── Edit: write order to localStorage then switch to Calculator ── */
+    const handleEditOrder = (order) => {
+        localStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
+        if (onViewChange) onViewChange('calculator');
     };
 
     // Helper to group orders by customer name
@@ -267,6 +276,13 @@ export function History() {
                                         <td className="history-actions-cell">
                                             <div className="actions-flex">
                                                 <button
+                                                    onClick={() => handleEditOrder(order)}
+                                                    className="btn-edit-small"
+                                                    title="تعديل الفاتورة"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleSendWhatsApp(order)}
                                                     className="btn-whatsapp-small"
                                                     disabled={!phone}
@@ -313,6 +329,13 @@ export function History() {
                                             {totalCost.toLocaleString()} ج.م
                                         </div>
                                         <div className="actions-flex">
+                                            <button
+                                                onClick={() => handleEditOrder(order)}
+                                                className="btn-edit-card"
+                                                title="تعديل الفاتورة"
+                                            >
+                                                <Edit2 size={18} />
+                                            </button>
                                             <button
                                                 onClick={() => handleSendWhatsApp(order)}
                                                 className="btn-whatsapp-card"

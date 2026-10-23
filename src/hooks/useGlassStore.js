@@ -393,6 +393,9 @@ function useGlassStoreInternal() {
         if (updatedFields.deposit !== undefined) dbFields.deposit = Number(updatedFields.deposit);
         if (updatedFields.items !== undefined) dbFields.items = updatedFields.items;
         if (updatedFields.paymentHistory !== undefined) dbFields.payment_history = updatedFields.paymentHistory;
+        if (updatedFields.baseCost !== undefined) dbFields.base_cost = Number(updatedFields.baseCost);
+        if (updatedFields.totalArea !== undefined) dbFields.total_area = Number(updatedFields.totalArea);
+        if (updatedFields.adjustments !== undefined) dbFields.adjustments = updatedFields.adjustments;
 
         // Fetch local order object to calculate remaining balance
         const order = orders.find(o => o.id === orderId);

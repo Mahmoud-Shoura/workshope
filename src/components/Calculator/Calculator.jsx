@@ -1,19 +1,136 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash, Save, Printer, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash, Save, Printer, MessageCircle, FilePlus, Edit2 } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Calculator.css';
 
+const DRAFT_KEY      = 'calculator_draft';
+const EDIT_ORDER_KEY = 'edit_order_pending';  // written by History, read here on mount
+
+function loadDraft() {
+    try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch { return null; }
+}
+
 export function Calculator() {
-    const { glassTypes, customButtons, saveOrder, printSettings } = useGlassStore();
-    const [groups, setGroups] = useState([
-        { id: 1, typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }
+    const { glassTypes, customButtons, saveOrder, updateOrder, printSettings, orders } = useGlassStore();
+
+    const getDefaultGroup = () => ([
+        { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }
     ]);
-    const [customerName, setCustomerName] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [deposit, setDeposit] = useState('');
-    const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Initialize from localStorage draft if available
+    const [groups, setGroups] = useState(() => {
+        const draft = loadDraft(glassTypes);
+        return draft?.groups || [{ id: 1, typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }];
+    });
+    const [customerName, setCustomerName] = useState(() => loadDraft()?.customerName || '');
+    const [phoneNumber, setPhoneNumber] = useState(() => loadDraft()?.phoneNumber || '');
+    const [deposit, setDeposit] = useState(() => loadDraft()?.deposit || '');
+    const [orderDate, setOrderDate] = useState(() => loadDraft()?.orderDate || new Date().toISOString().split('T')[0]);
     const [showPrintSheet, setShowPrintSheet] = useState(false);
-    const [activeButtons, setActiveButtons] = useState([]);
+    const [activeButtons, setActiveButtons] = useState(() => loadDraft()?.activeButtons || []);
+    const [editingOrderId, setEditingOrderId] = useState(() => loadDraft()?.editingOrderId || null);
+
+    // Persist draft to localStorage whenever state changes
+    useEffect(() => {
+        const draft = { groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }, [groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId]);
+
+    // ── On mount: check if History left an order for editing ──
+    useEffect(() => {
+        const raw = localStorage.getItem(EDIT_ORDER_KEY);
+        if (!raw) return;
+        try {
+            const order = JSON.parse(raw);
+            localStorage.removeItem(EDIT_ORDER_KEY);
+            // Rebuild groups from order items
+            const groupMap = {};
+            (order.items || []).forEach(item => {
+                const key = item.typeId;
+                if (!groupMap[key]) {
+                    groupMap[key] = {
+                        id: Date.now() + Math.random(),
+                        typeId: item.typeId,
+                        inputText: '',
+                        isAddLinear: item.isAddLinear || false,
+                        linearPrice: item.linearPrice ? String(item.linearPrice) : ''
+                    };
+                }
+                if (item.isPiece) {
+                    let rows = [];
+                    try { rows = JSON.parse(groupMap[key].inputText); } catch { rows = []; }
+                    rows.push({ id: item.id || (Date.now() + Math.random()), desc: item.description || '', qty: item.qty });
+                    groupMap[key].inputText = JSON.stringify(rows);
+                } else {
+                    const line = `${item.length}*${item.width}*${item.qty}`;
+                    groupMap[key].inputText = groupMap[key].inputText
+                        ? groupMap[key].inputText + '\n' + line
+                        : line;
+                }
+            });
+            const rebuiltGroups = Object.values(groupMap);
+            setGroups(rebuiltGroups.length ? rebuiltGroups : getDefaultGroup());
+            setCustomerName(order.customer_name || order.customerName || '');
+            setPhoneNumber(order.customer_phone || order.phoneNumber || '');
+            setDeposit(String(order.deposit || ''));
+            setOrderDate(order.date ? order.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+            setActiveButtons([]);
+            setEditingOrderId(order.id);
+        } catch (err) {
+            console.error('Failed to load edit order', err);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount only
+
+    // ── Build unique customer list for autocomplete ──
+    const knownCustomers = React.useMemo(() => {
+        if (!orders) return [];
+        const map = {};
+        orders.forEach(o => {
+            const name  = (o.customer_name || o.customerName || '').trim();
+            const phone = (o.customer_phone || o.phoneNumber || '').trim();
+            if (name && !map[name]) map[name] = phone;
+        });
+        return Object.entries(map).map(([name, phone]) => ({ name, phone }));
+    }, [orders]);
+
+    const [nameSuggestions, setNameSuggestions] = useState([]);
+    const [showNameSuggestions, setShowNameSuggestions] = useState(false);
+    const nameInputRef = useRef(null);
+
+    const handleNameChange = (val) => {
+        setCustomerName(val);
+        if (!val.trim()) { setNameSuggestions([]); setShowNameSuggestions(false); return; }
+        const filtered = knownCustomers.filter(c =>
+            c.name.toLowerCase().includes(val.toLowerCase())
+        );
+        setNameSuggestions(filtered);
+        setShowNameSuggestions(filtered.length > 0);
+    };
+
+    const handleSelectSuggestion = (customer) => {
+        setCustomerName(customer.name);
+        if (customer.phone) setPhoneNumber(customer.phone);
+        setNameSuggestions([]);
+        setShowNameSuggestions(false);
+    };
+
+    const handleNewInvoice = () => {
+        if (window.confirm('هل تريد مسح الفاتورة الحالية وبدء فاتورة جديدة؟')) {
+            setGroups(getDefaultGroup());
+            setCustomerName('');
+            setPhoneNumber('');
+            setDeposit('');
+            setOrderDate(new Date().toISOString().split('T')[0]);
+            setActiveButtons([]);
+            setEditingOrderId(null);
+            localStorage.removeItem(DRAFT_KEY);
+        }
+    };
 
     // Compute groups with fallback typeIds if they are deleted from inventory
     const adjustedGroups = groups.map(group => {
@@ -363,7 +480,7 @@ export function Calculator() {
         window.open(whatsappUrl, '_blank');
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!customerName) return alert('برجاء إدخال اسم العميل');
         if (activeItems.length === 0) return alert('برجاء إدخال أصناف أو مقاسات صحيحة أولاً');
 
@@ -371,44 +488,81 @@ export function Calculator() {
         const selectedDate = new Date(orderDate);
         selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
-        saveOrder({
-            customerName,
-            phoneNumber,
-            items: activeItems,
-            baseCost,
-            totalCost: totalCostWithAdjustments,
-            totalArea: totals.area,
-            adjustments,
-            deposit: Number(deposit || 0),
-            remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
-            date: selectedDate.toISOString()
-        });
-        alert('تم حفظ الطلب بنجاح!');
-        setGroups([{ id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }]);
-        setCustomerName('');
-        setPhoneNumber('');
-        setDeposit('');
-        setOrderDate(new Date().toISOString().split('T')[0]);
-        setActiveButtons([]);
+        if (editingOrderId) {
+            // Update existing order
+            await updateOrder(editingOrderId, {
+                customerName,
+                customerPhone: phoneNumber,
+                items: activeItems,
+                baseCost,
+                totalCost: totalCostWithAdjustments,
+                totalArea: totals.area,
+                adjustments,
+                deposit: Number(deposit || 0),
+                remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
+            });
+            alert('تم تحديث الفاتورة بنجاح!');
+            setEditingOrderId(null);
+        } else {
+            // Save new order
+            await saveOrder({
+                customerName,
+                phoneNumber,
+                items: activeItems,
+                baseCost,
+                totalCost: totalCostWithAdjustments,
+                totalArea: totals.area,
+                adjustments,
+                deposit: Number(deposit || 0),
+                remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
+                date: selectedDate.toISOString()
+            });
+            alert('تم حفظ الطلب بنجاح! ✅ الفاتورة لا تزال موجودة في الشاشة.');
+        }
+        // Do NOT clear the form - user can clear manually via "فاتورة جديدة"
     };
 
     return (
         <div className="calculator-container">
             {/* Header */}
             <div className="calculator-header no-print">
+                {editingOrderId && (
+                    <div className="edit-mode-banner">
+                        <Edit2 size={16} />
+                        <span>وضع التعديل — أنت تعدّل على فاتورة محفوظة</span>
+                    </div>
+                )}
                 <div className="calculator-inputs">
-                    <input
-                        type="text"
-                        placeholder="اسم العميل"
-                        value={customerName}
-                        onChange={e => setCustomerName(e.target.value)}
-                    />
+                    {/* Customer Name with Autocomplete */}
+                    <div className="autocomplete-wrapper" style={{ flex: 1, minWidth: 180, position: 'relative' }}>
+                        <input
+                            ref={nameInputRef}
+                            type="text"
+                            placeholder="اسم العميل"
+                            value={customerName}
+                            onChange={e => handleNameChange(e.target.value)}
+                            onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+                            onFocus={() => customerName && nameSuggestions.length > 0 && setShowNameSuggestions(true)}
+                            autoComplete="off"
+                        />
+                        {showNameSuggestions && (
+                            <ul className="autocomplete-list">
+                                {nameSuggestions.map((c, i) => (
+                                    <li key={i} onMouseDown={() => handleSelectSuggestion(c)} className="autocomplete-item">
+                                        <span className="ac-name">{c.name}</span>
+                                        {c.phone && <span className="ac-phone">{c.phone}</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                     <input
                         type="tel"
                         placeholder="رقم الهاتف (واتساب)"
                         value={phoneNumber}
                         onChange={e => setPhoneNumber(e.target.value)}
                         dir="ltr"
+                        style={{ flex: 1, minWidth: 150 }}
                     />
                     <input
                         type="number"
@@ -416,18 +570,24 @@ export function Calculator() {
                         value={deposit}
                         onChange={e => setDeposit(e.target.value)}
                         min="0"
+                        style={{ flex: 1, minWidth: 150 }}
                     />
                     <input
                         type="date"
                         value={orderDate}
                         onChange={e => setOrderDate(e.target.value)}
                         title="تاريخ المعاملة"
+                        style={{ flex: 1, minWidth: 150 }}
                     />
                 </div>
                 <div className="calculator-buttons">
-                    <button onClick={handleSave} className="btn-save" disabled={activeItems.length === 0}>
+                    <button onClick={handleSave} className={`btn-save${editingOrderId ? ' btn-update' : ''}`} disabled={activeItems.length === 0}>
                         <Save size={16} />
-                        حفظ
+                        {editingOrderId ? 'تحديث الفاتورة' : 'حفظ'}
+                    </button>
+                    <button onClick={handleNewInvoice} className="btn-new-invoice">
+                        <FilePlus size={16} />
+                        فاتورة جديدة
                     </button>
                     <button onClick={handleSendWhatsApp} className="btn-whatsapp" disabled={activeItems.length === 0}>
                         <MessageCircle size={16} />

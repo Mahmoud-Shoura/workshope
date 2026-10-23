@@ -80,7 +80,7 @@ function AppContent() {
     <Layout currentView={currentView} onViewChange={handleViewChange}>
       {currentView === 'calculator' && <Calculator />}
       {currentView === 'inventory' && <GlassTypeManager />}
-      {currentView === 'history' && <History />}
+      {currentView === 'history' && <History onViewChange={handleViewChange} />}
       {currentView === 'settings' && <Settings />}
     </Layout>
   );
