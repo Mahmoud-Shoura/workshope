@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2 } from 'lucide-react';
+import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2, CheckCircle } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './History.css';
 
@@ -7,7 +7,7 @@ import './History.css';
 const EDIT_ORDER_KEY = 'edit_order_pending';
 
 export function History({ onViewChange }) {
-    const { orders, deleteOrder, userRole, printSettings } = useGlassStore();
+    const { orders, deleteOrder, markOrderPaid, userRole, printSettings } = useGlassStore();
     const isEmployee = userRole === 'employee';
     const [selectedCustomerName, setSelectedCustomerName] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -27,9 +27,9 @@ export function History({ onViewChange }) {
     const buildWhatsAppMessage = (order) => {
         const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
         const customerName = order.customer_name || order.customerName || 'عميل';
-        const totalCost   = Number(order.total_cost   || order.totalCost   || 0);
-        const dep         = Number(order.deposit || 0);
-        const remaining   = order.remaining_balance !== undefined
+        const totalCost = Number(order.total_cost || order.totalCost || 0);
+        const dep = Number(order.deposit || 0);
+        const remaining = order.remaining_balance !== undefined
             ? Number(order.remaining_balance)
             : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : totalCost - dep);
 
@@ -54,9 +54,9 @@ export function History({ onViewChange }) {
         });
 
         msg += `━━━━━━━━━━━━━━━━\n`;
-        const baseCost  = order.base_cost  ?? order.baseCost;
+        const baseCost = order.base_cost ?? order.baseCost;
         const totalArea = order.total_area ?? order.totalArea;
-        if (totalArea)       msg += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
+        if (totalArea) msg += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
         if (baseCost != null) msg += `*الحساب الأساسي:* ${Number(baseCost).toFixed(2)} ج.م\n`;
 
         if (order.adjustments?.length) {
@@ -87,9 +87,16 @@ export function History({ onViewChange }) {
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
     };
 
+
     const handleDeleteOrder = (id) => {
         if (window.confirm('هل أنت متأكد من رغبتك في حذف هذه الفاتورة نهائياً؟')) {
             deleteOrder(id);
+        }
+    };
+
+    const handleMarkPaid = (order) => {
+        if (window.confirm('تأكيد استلام المبلغ المتبقي بالكامل لهذه الفاتورة؟')) {
+            markOrderPaid(order.id);
         }
     };
 
@@ -113,7 +120,7 @@ export function History({ onViewChange }) {
             const dep = Number(order.deposit || 0);
             const remaining = order.remaining_balance !== undefined ? Number(order.remaining_balance)
                 : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
-
+            const paidTotal = totalCost - remaining; // العربون + كل الدفعات
             if (!groups[name]) {
                 groups[name] = {
                     customerName: name,
@@ -128,7 +135,7 @@ export function History({ onViewChange }) {
             }
             groups[name].ordersCount += 1;
             groups[name].totalCost += totalCost;
-            groups[name].totalDeposit += dep;
+            groups[name].totalDeposit += paidTotal;
             groups[name].totalRemaining += remaining;
             groups[name].orders.push(order);
 
@@ -170,7 +177,7 @@ export function History({ onViewChange }) {
         return (
             <div className="history-container">
                 <div className="customer-detail-header">
-                    <button 
+                    <button
                         onClick={() => setSelectedCustomerName(null)}
                         className="btn-back"
                     >
@@ -275,6 +282,19 @@ export function History({ onViewChange }) {
                                         </td>
                                         <td className="history-actions-cell">
                                             <div className="actions-flex">
+                                                {rem > 0 ? (
+                                                    <button
+                                                        onClick={() => handleMarkPaid(order)}
+                                                        className="btn-paid-small"
+                                                        title="تم استلام المبلغ"
+                                                    >
+                                                        <CheckCircle size={16} />
+                                                    </button>
+                                                ) : (
+                                                    <span className="paid-badge">
+                                                        <CheckCircle size={14} /> تم الاستلام
+                                                    </span>
+                                                )}
                                                 <button
                                                     onClick={() => handleEditOrder(order)}
                                                     className="btn-edit-small"
@@ -329,6 +349,19 @@ export function History({ onViewChange }) {
                                             {totalCost.toLocaleString()} ج.م
                                         </div>
                                         <div className="actions-flex">
+                                            {rem > 0 ? (
+                                                <button
+                                                    onClick={() => handleMarkPaid(order)}
+                                                    className="btn-paid-card"
+                                                    title="تم استلام المبلغ"
+                                                >
+                                                    <CheckCircle size={18} />
+                                                </button>
+                                            ) : (
+                                                <span className="paid-badge">
+                                                    <CheckCircle size={14} /> تم الاستلام
+                                                </span>
+                                            )}
                                             <button
                                                 onClick={() => handleEditOrder(order)}
                                                 className="btn-edit-card"
@@ -362,13 +395,13 @@ export function History({ onViewChange }) {
                                         <div key={idx} className="history-card-item">
                                             <span>{item.typeName}</span>
                                             <span>
-                                                {item.isPiece ? 
-                                                 (item.description || 'قطعة') : 
-                                                 `${item.length}x${item.width}`} ({item.qty}) {item.isAddLinear ? `(+ م.ط)` : ''}
+                                                {item.isPiece ?
+                                                    (item.description || 'قطعة') :
+                                                    `${item.length}x${item.width}`} ({item.qty}) {item.isAddLinear ? `(+ م.ط)` : ''}
                                             </span>
                                         </div>
                                     ))}
-                                    
+
                                     {order.adjustments && order.adjustments.length > 0 && (
                                         <div className="history-card-adjustments">
                                             <div className="card-adj-header">الإضافات والخصومات:</div>
@@ -426,7 +459,7 @@ export function History({ onViewChange }) {
                     {groupedCustomers.map((customer) => {
                         const hasRemaining = customer.totalRemaining > 0;
                         return (
-                            <div 
+                            <div
                                 key={customer.customerName}
                                 className={`customer-summary-card ${customer.isNameless ? 'nameless-card' : ''}`}
                                 onClick={() => setSelectedCustomerName(customer.customerName)}

@@ -172,7 +172,7 @@ export function Calculator() {
                 }));
             }
         }
-        currentRows.push({ id: `${Date.now()}-${Math.random()}`, desc: '', qty: 1 });
+        currentRows.push({ id: `${Date.now()}-${Math.random()}`, desc: '', qty: '' });
         updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
     };
 
@@ -230,7 +230,7 @@ export function Calculator() {
                         description: item.desc || '',
                         length: 0,
                         width: 0,
-                        qty: isNaN(Number(item.qty)) || Number(item.qty) <= 0 ? 1 : Number(item.qty),
+                        qty: item.qty === '' ? '' : (isNaN(Number(item.qty)) ? '' : Number(item.qty)),
                         isValid: true
                     }));
                 }
@@ -308,30 +308,31 @@ export function Calculator() {
     const calculateRow = (length, width, qty, typeId, isAddLinear, linearPrice) => {
         const type = glassTypes.find(t => t.id === typeId);
         if (!type) return { area: 0, cost: 0, extraLinearCost: 0 };
+        const safeQty = (qty === '' || isNaN(Number(qty))) ? 0 : Number(qty);
 
         let area = 0;
         let cost = 0;
 
         if (type.unit === 'm2') {
             const areaM2 = (length * width) / 10000;
-            area = areaM2 * qty;
+            area = areaM2 * safeQty;
             cost = area * type.price;
         } else if (type.unit === 'piece') {
             area = 0;
-            cost = qty * type.price;
+            cost = safeQty * type.price;
         } else if (type.unit === 'linear_x2') {
             const linearMeters = ((length + width) * 2) / 100;
-            area = linearMeters * qty;
+            area = linearMeters * safeQty;
             cost = area * type.price;
         } else if (type.unit === 'linear_x4') {
             const linearMeters = ((length + width) * 4) / 100;
-            area = linearMeters * qty;
+            area = linearMeters * safeQty;
             cost = area * type.price;
         }
 
         let extraLinearCost = 0;
         if (isAddLinear && type.unit !== 'piece' && Number(linearPrice) > 0) {
-            const linearMeters = ((length + width) * 2) / 100 * qty;
+            const linearMeters = ((length + width) * 2) / 100 * safeQty;
             extraLinearCost = linearMeters * Number(linearPrice);
             cost += extraLinearCost;
         }
@@ -674,8 +675,8 @@ export function Calculator() {
                                                                 <input
                                                                     type="number"
                                                                     value={row.qty}
-                                                                    onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', parseInt(e.target.value, 10) || 1)}
-                                                                    min="1"
+                                                                    onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                                                    min="0"
                                                                     className="piece-qty-input"
                                                                     style={{ width: '80px', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
                                                                 />

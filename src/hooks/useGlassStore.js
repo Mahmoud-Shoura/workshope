@@ -384,6 +384,44 @@ function useGlassStoreInternal() {
         }
     };
 
+    const markOrderPaid = async (orderId) => {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) {
+            console.error('markOrderPaid: الفاتورة مش موجودة', orderId);
+            return;
+        }
+
+        const total = Number(order.total_cost || 0);
+        const remaining = order.remaining_balance != null
+            ? Number(order.remaining_balance)
+            : total - Number(order.deposit || 0);
+
+        if (remaining <= 0) return;
+
+        const newPayment = {
+            id: Date.now().toString(),
+            amount: remaining,
+            note: 'استلام المبلغ المتبقي بالكامل',
+            date: new Date().toISOString(),
+        };
+        const updatedHistory = [...(order.payment_history || []), newPayment];
+
+        const { data, error } = await supabase
+            .from('orders')
+            .update({ payment_history: updatedHistory, remaining_balance: 0 })
+            .eq('id', orderId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('markOrderPaid error:', error);
+            alert('فشل تسجيل الاستلام: ' + error.message);
+            return;
+        }
+
+        setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, ...data } : o)));
+    };
+
     const updateOrder = async (orderId, updatedFields) => {
         // Map camelCase fields from frontend if any
         const dbFields = {};
@@ -443,7 +481,10 @@ function useGlassStoreInternal() {
         try {
             const { data, error } = await supabase.auth.signUp({
                 email,
-                password
+                password,
+                options: {
+                    emailRedirectTo: window.location.origin
+                }
             });
             if (error) throw error;
             return { success: true, user: data.user };
@@ -609,6 +650,7 @@ function useGlassStoreInternal() {
         saveOrder,
         deleteOrder,
         updateOrderPayment,
+        markOrderPaid,
         updateOrder,
         printSettings,
         updatePrintSettings,
