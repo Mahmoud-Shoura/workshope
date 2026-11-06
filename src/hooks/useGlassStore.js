@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const GlassStoreContext = createContext(null);
@@ -48,45 +48,16 @@ function useGlassStoreInternal() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Track Auth state
-    useEffect(() => {
-        const getSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                setCurrentUser(session.user);
-                await loadWorkshopData(session.user.id);
-            } else {
-                setLoading(false);
-            }
-        };
-        getSession();
-
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                if (session?.user) {
-                    setCurrentUser(session.user);
-                    await loadWorkshopData(session.user.id);
-                } else {
-                    setCurrentUser(null);
-                    setActiveWorkshop(null);
-                    setUserRole(null);
-                    setSubscription(null);
-                    setGlassTypes([]);
-                    setCustomButtons([]);
-                    setOrders([]);
-                    setPrintSettings(DEFAULT_PRINT_SETTINGS);
-                    setLoading(false);
-                }
-            }
-        );
-
-        return () => {
-            authSubscription?.unsubscribe();
-        };
-    }, []);
+    // يمنع تحميل نفس بيانات المستخدم أكتر من مرة
+    const loadedUserRef = useRef(null);
 
     // Load workshop data
-    const loadWorkshopData = async (userId) => {
+    const loadWorkshopData = async (user, force = false) => {
+        if (!user) return;
+        if (!force && loadedUserRef.current === user.id) return; // منع التكرار
+        loadedUserRef.current = user.id;
+        const userId = user.id;
+
         try {
             setLoading(true);
             setError(null);
@@ -96,32 +67,25 @@ function useGlassStoreInternal() {
                 .from('workshop_members')
                 .select('workshop_id, role, workshops(name)')
                 .eq('user_id', userId)
-                .single();
+                .limit(1)
+                .maybeSingle();
 
-            if (memError) {
-                if (memError.code === 'PGRST116') {
-                    // No workshop found yet
-                    console.log('No workshop found for user, waiting for workshop creation');
-                    setActiveWorkshop(null);
-                    setUserRole(null);
-                    setSubscription(null);
-                    setGlassTypes([]);
-                    setCustomButtons([]);
-                    setLoading(false);
-                    return;
-                }
-                throw memError;
-            }
+            if (memError) throw memError;
 
-            if (!membership || !membership.workshop_id) {
-                console.error('Workshop membership incomplete:', membership);
+            if (!membership?.workshop_id) {
+                // No workshop found yet
+                console.log('No workshop found for user, waiting for workshop creation');
                 setActiveWorkshop(null);
+                setUserRole(null);
+                setSubscription(null);
+                setGlassTypes([]);
+                setCustomButtons([]);
                 setLoading(false);
                 return;
             }
 
             const wId = membership.workshop_id;
-            setActiveWorkshop({ id: wId, name: membership.workshops.name });
+            setActiveWorkshop({ id: wId, name: membership.workshops?.name });
             setUserRole(membership.role);
 
             // 2. Fetch Subscription details
@@ -137,8 +101,7 @@ function useGlassStoreInternal() {
 
             // VIP / Admin emails list for lifetime trial access
             const VIP_EMAILS = ['mahmoudhameidshoura@gmail.com'];
-            const { data: { user: currentUserData } } = await supabase.auth.getUser();
-            const userEmail = currentUserData?.email || currentUser?.email;
+            const userEmail = user.email;
             const isVipUser = userEmail && VIP_EMAILS.includes(userEmail.toLowerCase());
 
             if (isVipUser) {
@@ -191,11 +154,43 @@ function useGlassStoreInternal() {
 
         } catch (err) {
             console.error('Error loading workshop details:', err);
+            loadedUserRef.current = null; // اسمح بإعادة المحاولة
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
+
+    // Track Auth state
+    useEffect(() => {
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+            (event, session) => {
+                if (session?.user) {
+                    setCurrentUser(session.user);
+                    if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+                        // setTimeout عشان نتجنب الـ deadlock بتاع Supabase
+                        setTimeout(() => loadWorkshopData(session.user), 0);
+                    }
+                } else {
+                    loadedUserRef.current = null;
+                    setCurrentUser(null);
+                    setActiveWorkshop(null);
+                    setUserRole(null);
+                    setSubscription(null);
+                    setGlassTypes([]);
+                    setCustomButtons([]);
+                    setOrders([]);
+                    setPrintSettings(DEFAULT_PRINT_SETTINGS);
+                    setLoading(false);
+                }
+            }
+        );
+
+        return () => {
+            authSubscription?.unsubscribe();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Create a new workshop and populate default values
     const createWorkshop = async (name) => {
@@ -231,7 +226,7 @@ function useGlassStoreInternal() {
 
             // Reload everything for this user - critical step
             if (currentUser) {
-                await loadWorkshopData(currentUser.id);
+                await loadWorkshopData(currentUser, true);
             }
             return { success: true };
         } catch (err) {
@@ -487,6 +482,10 @@ function useGlassStoreInternal() {
                 }
             });
             if (error) throw error;
+            // لو تأكيد الإيميل مفعّل، مفيش session لحد ما المستخدم يفتح اللينك
+            if (!data.session) {
+                return { success: true, needsConfirmation: true };
+            }
             return { success: true, user: data.user };
         } catch (err) {
             const message = err.message === 'Failed to fetch'
@@ -589,7 +588,7 @@ function useGlassStoreInternal() {
 
             // Reload info
             if (currentUser) {
-                await loadWorkshopData(currentUser.id);
+                await loadWorkshopData(currentUser, true);
             }
             return { success: true };
         } catch (err) {

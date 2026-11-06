@@ -23,7 +23,7 @@ function NavItem({ view, icon: Icon, label, currentView, onViewChange, setSideba
 export function Layout({ children, currentView, onViewChange }) {
     const [isSidebarOpen, setSidebarOpen] = React.useState(false);
     const { theme, toggleTheme } = useTheme();
-    const { printSettings } = useGlassStore();
+    const { printSettings, logoutUser } = useGlassStore();
     const [exitConfirmCount, setExitConfirmCount] = React.useState(0);
     const [showExitToast, setShowExitToast] = React.useState(false);
 
@@ -37,16 +37,19 @@ export function Layout({ children, currentView, onViewChange }) {
         }
     }, [exitConfirmCount]);
 
-    const handleExit = () => {
+    const handleExit = async () => {
         if (exitConfirmCount === 0) {
             setExitConfirmCount(1);
             setShowExitToast(true);
         } else {
             setShowExitToast(false);
-            window.close();
-            setTimeout(() => {
-                window.location.href = 'about:blank';
-            }, 100);
+            setExitConfirmCount(0);
+            try {
+                await logoutUser();
+            } catch (err) {
+                console.error('Logout failed:', err);
+            }
+            window.location.hash = ''; // نظّف الـ hash
         }
     };
 
@@ -64,37 +67,37 @@ export function Layout({ children, currentView, onViewChange }) {
                     {printSettings?.workshop_name || 'نظام إدارة الورش'}
                 </div>
                 <div className="layout-sidebar-nav">
-                    <NavItem 
-                        view="calculator" 
-                        icon={Calculator} 
-                        label="الحاسبة" 
-                        currentView={currentView} 
-                        onViewChange={onViewChange} 
-                        setSidebarOpen={setSidebarOpen} 
+                    <NavItem
+                        view="calculator"
+                        icon={Calculator}
+                        label="الحاسبة"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
                     />
-                    <NavItem 
-                        view="inventory" 
-                        icon={LayoutDashboard} 
-                        label="المخزن" 
-                        currentView={currentView} 
-                        onViewChange={onViewChange} 
-                        setSidebarOpen={setSidebarOpen} 
+                    <NavItem
+                        view="inventory"
+                        icon={LayoutDashboard}
+                        label="المخزن"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
                     />
-                    <NavItem 
-                        view="history" 
-                        icon={History} 
-                        label="السجل" 
-                        currentView={currentView} 
-                        onViewChange={onViewChange} 
-                        setSidebarOpen={setSidebarOpen} 
+                    <NavItem
+                        view="history"
+                        icon={History}
+                        label="السجل"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
                     />
-                    <NavItem 
-                        view="settings" 
-                        icon={Settings} 
-                        label="الإعدادات" 
-                        currentView={currentView} 
-                        onViewChange={onViewChange} 
-                        setSidebarOpen={setSidebarOpen} 
+                    <NavItem
+                        view="settings"
+                        icon={Settings}
+                        label="الإعدادات"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
                     />
                     <button
                         onClick={handleExit}
@@ -147,7 +150,7 @@ export function Layout({ children, currentView, onViewChange }) {
             {/* Exit confirmation toast */}
             {showExitToast && (
                 <div className="layout-exit-toast">
-                    اضغط مرة أخرى للخروج من الموقع
+                    اضغط مرة أخرى لتسجيل الخروج
                 </div>
             )}
         </div>

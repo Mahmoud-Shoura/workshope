@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout/Layout';
 import { Calculator } from './components/Calculator/Calculator';
 import { GlassTypeManager } from './components/GlassTypeManager/GlassTypeManager';
@@ -14,6 +14,17 @@ import { useGlassStore, GlassStoreProvider } from './hooks/useGlassStore';
 function AppContent() {
   const { currentUser, subscription, loading } = useGlassStore();
   const [showAuth, setShowAuth] = useState(false);
+  const wasLoggedIn = useRef(false);
+
+  // لما المستخدم يسجل خروج، ارجع للاندنج بيدج
+  useEffect(() => {
+    if (currentUser) {
+      wasLoggedIn.current = true;
+    } else if (wasLoggedIn.current) {
+      wasLoggedIn.current = false;
+      setShowAuth(false);
+    }
+  }, [currentUser]);
 
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
@@ -95,6 +106,5 @@ function App() {
     </ThemeProvider>
   );
 }
-
 
 export default App;

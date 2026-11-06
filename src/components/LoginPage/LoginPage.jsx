@@ -10,12 +10,14 @@ export function LoginPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [workshopName, setWorkshopName] = useState('');
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setInfo('');
         setLoading(true);
 
         try {
@@ -36,12 +38,15 @@ export function LoginPage() {
                     return;
                 }
                 const result = await registerUser(email.trim(), password);
-                if (!result.success) {
-                    setError(result.error);
+                if (!result?.success) {
+                    setError(result?.error || 'حدث خطأ غير متوقع');
+                } else if (result.needsConfirmation) {
+                    // الحساب اتعمل بس لازم تأكيد الإيميل قبل الدخول
+                    setMode('login');
+                    setPassword('');
+                    setConfirmPassword('');
+                    setInfo('تم إرسال لينك التأكيد على بريدك. افتحه ثم سجّل دخولك.');
                 } else {
-                    // Check if user is linked to an invited workshop, otherwise ask to create one
-                    // Small delay to let DB triggers execute
-                    await new Promise(r => setTimeout(r, 1000));
                     setMode('create_workshop');
                 }
             } else if (mode === 'login') {
@@ -51,8 +56,8 @@ export function LoginPage() {
                     return;
                 }
                 const result = await loginUser(email.trim(), password);
-                if (!result.success) {
-                    setError(result.error);
+                if (!result?.success) {
+                    setError(result?.error || 'حدث خطأ غير متوقع');
                 }
             } else if (mode === 'create_workshop') {
                 if (!workshopName.trim()) {
@@ -61,8 +66,8 @@ export function LoginPage() {
                     return;
                 }
                 const result = await createWorkshop(workshopName.trim());
-                if (!result.success) {
-                    setError(result.error);
+                if (!result?.success) {
+                    setError(result?.error || 'حدث خطأ غير متوقع');
                 }
             }
         } catch (err) {
@@ -77,7 +82,7 @@ export function LoginPage() {
         if (currentUser && !activeWorkshop && !storeLoading && mode !== 'create_workshop') {
             setMode('create_workshop');
         }
-    }, [currentUser, activeWorkshop, storeLoading]);
+    }, [currentUser, activeWorkshop, storeLoading, mode]);
 
     return (
         <div className="login-overlay">
@@ -108,14 +113,14 @@ export function LoginPage() {
                     <div className="login-tabs">
                         <button
                             className={`login-tab ${mode === 'login' ? 'active' : ''}`}
-                            onClick={() => { setMode('login'); setError(''); }}
+                            onClick={() => { setMode('login'); setError(''); setInfo(''); }}
                             type="button"
                         >
                             تسجيل الدخول
                         </button>
                         <button
                             className={`login-tab ${mode === 'register' ? 'active' : ''}`}
-                            onClick={() => { setMode('register'); setError(''); }}
+                            onClick={() => { setMode('register'); setError(''); setInfo(''); }}
                             type="button"
                         >
                             حساب جديد
@@ -195,6 +200,12 @@ export function LoginPage() {
                         </>
                     )}
 
+                    {info && (
+                        <div className="login-error" style={{ color: '#16a34a' }}>
+                            <span>✅</span> {info}
+                        </div>
+                    )}
+
                     {error && (
                         <div className="login-error">
                             <span>⚠️</span> {error}
@@ -224,7 +235,7 @@ export function LoginPage() {
                         <button
                             type="button"
                             className="login-switch-link"
-                            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+                            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setInfo(''); }}
                         >
                             {mode === 'login' ? 'أنشئ حساباً' : 'سجل دخولك'}
                         </button>

@@ -3,28 +3,66 @@ import { Plus, Trash, Save, Printer, MessageCircle, FilePlus, Edit2 } from 'luci
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Calculator.css';
 
-const DRAFT_KEY      = 'calculator_draft';
+const DRAFT_KEY = 'calculator_draft';
 const EDIT_ORDER_KEY = 'edit_order_pending';  // written by History, read here on mount
+
+// وحدات الحساب اللي يقدر البرنامج يعملها (تقدر تضيف أي وحدة منهم فوق وحدة الصنف الأساسية)
+const EXTRA_UNITS = [
+    { unit: 'm2', name: 'متر مربع (م²)', short: 'م²' },
+    { unit: 'linear_x2', name: 'متر طولي (محيط × 2)', short: 'م.ط' },
+    { unit: 'linear_x4', name: 'متر طولي (محيط × 4)', short: 'م.ط×4' },
+    { unit: 'piece', name: 'قطعة (بالعدد)', short: 'قطعة' },
+];
+const extraUnitInfo = (unit) => EXTRA_UNITS.find(u => u.unit === unit);
+
+// ───────── Helpers ─────────
+const unitLabel = (unit) => {
+    if (unit === 'm2') return 'م²';
+    if (unit === 'piece') return 'قطعة';
+    return 'م.ط';
+};
+
+// يحوّل المجموعة القديمة (isAddLinear/linearPrice) للشكل الجديد (extras = [{ unit, price }])
+function normalizeGroup(g) {
+    let extras = Array.isArray(g.extras) ? g.extras.filter(e => e && extraUnitInfo(e.unit)) : [];
+    if (!extras.length && g.isAddLinear && Number(g.linearPrice) > 0) {
+        extras = [{ unit: 'linear_x2', price: String(g.linearPrice) }];
+    }
+    const rest = { ...g };
+    delete rest.isAddLinear;
+    delete rest.linearPrice;
+    rest.extras = extras;
+    return rest;
+}
 
 function loadDraft() {
     try {
         const raw = localStorage.getItem(DRAFT_KEY);
         if (!raw) return null;
-        return JSON.parse(raw);
+        const draft = JSON.parse(raw);
+        if (Array.isArray(draft?.groups)) {
+            draft.groups = draft.groups.map(normalizeGroup);
+        }
+        return draft;
     } catch { return null; }
 }
 
 export function Calculator() {
     const { glassTypes, customButtons, saveOrder, updateOrder, printSettings, orders } = useGlassStore();
 
-    const getDefaultGroup = () => ([
-        { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }
-    ]);
+    const makeGroup = (id = Date.now()) => ({
+        id,
+        typeId: glassTypes[0]?.id || '',
+        inputText: '',
+        extras: []
+    });
+
+    const getDefaultGroup = () => ([makeGroup()]);
 
     // Initialize from localStorage draft if available
     const [groups, setGroups] = useState(() => {
-        const draft = loadDraft(glassTypes);
-        return draft?.groups || [{ id: 1, typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }];
+        const draft = loadDraft();
+        return draft?.groups?.length ? draft.groups : [makeGroup(1)];
     });
     const [customerName, setCustomerName] = useState(() => loadDraft()?.customerName || '');
     const [phoneNumber, setPhoneNumber] = useState(() => loadDraft()?.phoneNumber || '');
@@ -52,12 +90,19 @@ export function Calculator() {
             (order.items || []).forEach(item => {
                 const key = item.typeId;
                 if (!groupMap[key]) {
+                    let extras = [];
+                    if (Array.isArray(item.extras) && item.extras.length) {
+                        extras = item.extras
+                            .filter(e => extraUnitInfo(e.unit))
+                            .map(e => ({ unit: e.unit, price: String(e.price ?? '') }));
+                    } else if (item.isAddLinear && Number(item.linearPrice) > 0) {
+                        extras = [{ unit: 'linear_x2', price: String(item.linearPrice) }];
+                    }
                     groupMap[key] = {
                         id: Date.now() + Math.random(),
                         typeId: item.typeId,
                         inputText: '',
-                        isAddLinear: item.isAddLinear || false,
-                        linearPrice: item.linearPrice ? String(item.linearPrice) : ''
+                        extras
                     };
                 }
                 if (item.isPiece) {
@@ -83,7 +128,7 @@ export function Calculator() {
         } catch (err) {
             console.error('Failed to load edit order', err);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // run once on mount only
 
     // ── Build unique customer list for autocomplete ──
@@ -91,7 +136,7 @@ export function Calculator() {
         if (!orders) return [];
         const map = {};
         orders.forEach(o => {
-            const name  = (o.customer_name || o.customerName || '').trim();
+            const name = (o.customer_name || o.customerName || '').trim();
             const phone = (o.customer_phone || o.phoneNumber || '').trim();
             if (name && !map[name]) map[name] = phone;
         });
@@ -134,14 +179,15 @@ export function Calculator() {
 
     // Compute groups with fallback typeIds if they are deleted from inventory
     const adjustedGroups = groups.map(group => {
-        if (!glassTypes.find(t => t.id === group.typeId) && glassTypes.length > 0) {
-            return { ...group, typeId: glassTypes[0].id };
+        let typeId = group.typeId;
+        if (!glassTypes.find(t => t.id === typeId) && glassTypes.length > 0) {
+            typeId = glassTypes[0].id;
         }
-        return group;
+        return { ...group, typeId, extras: group.extras || [] };
     });
 
     const addGroup = () => {
-        setGroups([...groups, { id: Date.now(), typeId: glassTypes[0]?.id || '', inputText: '', isAddLinear: false, linearPrice: '' }]);
+        setGroups([...groups, makeGroup()]);
     };
 
     const updateGroup = (id, field, value) => {
@@ -152,6 +198,35 @@ export function Calculator() {
         if (groups.length > 1) {
             setGroups(groups.filter(group => group.id !== id));
         }
+    };
+
+    // ── وحدات حساب إضافية (تختار من وحدات البرنامج) ──
+    const addExtraUnit = (groupId, unit) => {
+        if (!unit) return;
+        // سعر مبدئي من أول صنف في المخزن بنفس الوحدة (لو موجود) وتقدر تعدله
+        const suggested = glassTypes.find(t => t.unit === unit)?.price;
+        setGroups(groups.map(group => {
+            if (group.id !== groupId) return group;
+            const current = group.extras || [];
+            if (current.some(e => e.unit === unit)) return group;
+            return { ...group, extras: [...current, { unit, price: suggested != null ? String(suggested) : '' }] };
+        }));
+    };
+
+    const removeExtraUnit = (groupId, unit) => {
+        setGroups(groups.map(group => group.id === groupId
+            ? { ...group, extras: (group.extras || []).filter(e => e.unit !== unit) }
+            : group));
+    };
+
+    const setExtraPrice = (groupId, unit, price) => {
+        setGroups(groups.map(group => {
+            if (group.id !== groupId) return group;
+            return {
+                ...group,
+                extras: (group.extras || []).map(e => e.unit === unit ? { ...e, price } : e)
+            };
+        }));
     };
 
     const handleAddPieceRow = (groupId) => {
@@ -305,9 +380,38 @@ export function Calculator() {
         return parsed;
     };
 
-    const calculateRow = (length, width, qty, typeId, isAddLinear, linearPrice) => {
+    // يحسب الوحدات الإضافية لمقاس واحد
+    const calculateExtras = (length, width, qty, extras) => {
+        const safeQty = (qty === '' || isNaN(Number(qty))) ? 0 : Number(qty);
+        const details = [];
+        (extras || []).forEach(ex => {
+            const info = extraUnitInfo(ex.unit);
+            if (!info) return;
+            const price = Number(ex.price) || 0;
+            let measure = 0;
+            if (ex.unit === 'm2') {
+                measure = ((length * width) / 10000) * safeQty;
+            } else if (ex.unit === 'linear_x2') {
+                measure = (((length + width) * 2) / 100) * safeQty;
+            } else if (ex.unit === 'linear_x4') {
+                measure = (((length + width) * 4) / 100) * safeQty;
+            } else if (ex.unit === 'piece') {
+                measure = safeQty;
+            }
+            details.push({
+                unit: ex.unit,
+                name: info.name,
+                price,
+                measure,
+                cost: measure * price
+            });
+        });
+        return details;
+    };
+
+    const calculateRow = (length, width, qty, typeId, extras) => {
         const type = glassTypes.find(t => t.id === typeId);
-        if (!type) return { area: 0, cost: 0, extraLinearCost: 0 };
+        if (!type) return { area: 0, cost: 0, extraCost: 0, extrasDetail: [] };
         const safeQty = (qty === '' || isNaN(Number(qty))) ? 0 : Number(qty);
 
         let area = 0;
@@ -330,14 +434,15 @@ export function Calculator() {
             cost = area * type.price;
         }
 
-        let extraLinearCost = 0;
-        if (isAddLinear && type.unit !== 'piece' && Number(linearPrice) > 0) {
-            const linearMeters = ((length + width) * 2) / 100 * safeQty;
-            extraLinearCost = linearMeters * Number(linearPrice);
-            cost += extraLinearCost;
+        let extrasDetail = [];
+        let extraCost = 0;
+        if (type.unit !== 'piece') {
+            extrasDetail = calculateExtras(length, width, qty, extras);
+            extraCost = extrasDetail.reduce((sum, e) => sum + e.cost, 0);
+            cost += extraCost;
         }
 
-        return { area, cost, extraLinearCost };
+        return { area, cost, extraCost, extrasDetail };
     };
 
     const getActiveItems = () => {
@@ -348,13 +453,12 @@ export function Calculator() {
             const parsed = parseMeasurementsText(group.inputText, isPiece);
             parsed.forEach(item => {
                 if (item.isValid) {
-                    const { area, cost, extraLinearCost } = calculateRow(
+                    const { area, cost, extraCost, extrasDetail } = calculateRow(
                         item.length,
                         item.width,
                         item.qty,
                         group.typeId,
-                        group.isAddLinear,
-                        group.linearPrice
+                        group.extras
                     );
                     allItems.push({
                         id: item.id,
@@ -363,11 +467,15 @@ export function Calculator() {
                         qty: item.qty,
                         typeId: group.typeId,
                         typeName: type?.name || '',
+                        unit: type?.unit || '',
                         description: item.description || '',
                         isPiece,
-                        isAddLinear: group.isAddLinear,
-                        linearPrice: Number(group.linearPrice) || 0,
-                        extraLinearCost,
+                        // حقول قديمة محفوظة للتوافق مع باقي الشاشات
+                        isAddLinear: false,
+                        linearPrice: 0,
+                        extraLinearCost: extraCost,
+                        // الإضافات الجديدة
+                        extras: extrasDetail,
                         area,
                         cost
                     });
@@ -376,6 +484,12 @@ export function Calculator() {
         });
         return allItems;
     };
+
+    // نص وصف الإضافات لعنصر (للواتساب والطباعة)
+    const extrasText = (item) =>
+        (item.extras || [])
+            .map(e => `${e.measure.toFixed(2)} ${extraUnitInfo(e.unit)?.short || unitLabel(e.unit)}`)
+            .join(' + ');
 
     const activeItems = getActiveItems();
 
@@ -434,12 +548,10 @@ export function Calculator() {
             } else {
                 message += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
                 message += `   الكمية: ${item.qty}\n`;
-                const unitLabel = glassTypes.find(t => t.id === item.typeId)?.unit === 'm2' ? 'م²' : 'م.ط';
-                if (item.isAddLinear) {
-                    const perimeter = ((item.length + item.width) * 2 / 100 * item.qty);
-                    message += `   المساحة: ${item.area.toFixed(2)} ${unitLabel} + ${perimeter.toFixed(2)} م.ط إضافي\n`;
-                } else {
-                    message += `   المساحة/الطول: ${item.area.toFixed(2)} ${unitLabel}\n`;
+                const label = unitLabel(item.unit);
+                message += `   المساحة/الطول: ${item.area.toFixed(2)} ${label}\n`;
+                if (item.extras && item.extras.length > 0) {
+                    message += `   إضافات: ${extrasText(item)}\n`;
                 }
             }
             message += `   السعر: ${item.cost.toFixed(2)} ج.م\n\n`;
@@ -607,10 +719,14 @@ export function Calculator() {
                     const type = glassTypes.find(t => t.id === group.typeId);
                     const isPiece = type?.unit === 'piece';
                     const parsedRows = parseMeasurementsText(group.inputText, isPiece);
-                    
+
+                    // الوحدات الإضافية المختارة لهذه المجموعة
+                    const activeExtras = (group.extras || []).filter(e => extraUnitInfo(e.unit));
+                    const remainingUnits = EXTRA_UNITS.filter(u => !activeExtras.some(e => e.unit === u.unit));
+
                     const groupSubtotal = parsedRows.reduce((acc, r) => {
                         if (!r.isValid) return acc;
-                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.isAddLinear, group.linearPrice);
+                        const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.extras);
                         return { area: acc.area + area, cost: acc.cost + cost };
                     }, { area: 0, cost: 0 });
 
@@ -625,7 +741,7 @@ export function Calculator() {
                                         className="group-type-select"
                                     >
                                         {glassTypes.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name} ({t.price} ج.م / {t.unit === 'm2' ? 'م²' : t.unit === 'piece' ? 'قطعة' : 'م.ط'})</option>
+                                            <option key={t.id} value={t.id}>{t.name} ({t.price} ج.م / {unitLabel(t.unit)})</option>
                                         ))}
                                     </select>
                                 </div>
@@ -728,33 +844,70 @@ export function Calculator() {
                                 ) : (
                                     <>
                                         <div className="group-input-section" style={{ width: '100%' }}>
-                                            <div className="dual-calc-toggle-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                                            <div className="dual-calc-toggle-row" style={{ marginBottom: '8px' }}>
                                                 <label className="group-input-label">أدخل المقاسات:</label>
-                                                <div className="linear-add-toggle-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={group.isAddLinear || false}
-                                                            onChange={(e) => updateGroup(group.id, 'isAddLinear', e.target.checked)}
-                                                        />
-                                                        <span>إضافة حساب متر طولي لهذا المقاس</span>
-                                                    </label>
-                                                    {group.isAddLinear && (
-                                                        <div className="linear-price-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <span className="price-input-prefix" style={{ fontSize: '14px' }}>سعر م.ط:</span>
-                                                            <input 
-                                                                type="number"
-                                                                value={group.linearPrice || ''}
-                                                                onChange={(e) => updateGroup(group.id, 'linearPrice', e.target.value)}
-                                                                placeholder="ج.م"
-                                                                className="linear-price-input"
-                                                                style={{ width: '85px', padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px' }}
-                                                                min="0"
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
                                             </div>
+
+                                            {/* ── إضافة وحدة حساب فوق الوحدة الأساسية ── */}
+                                            <div
+                                                className="extras-box"
+                                                style={{
+                                                    border: '1px dashed #bbb',
+                                                    borderRadius: '8px',
+                                                    padding: '10px',
+                                                    marginBottom: '10px'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '14px', fontWeight: 'bold' }}>إضافة وحدة حساب لهذا المقاس:</span>
+                                                    <select
+                                                        value=""
+                                                        onChange={(e) => addExtraUnit(group.id, e.target.value)}
+                                                        disabled={remainingUnits.length === 0}
+                                                        style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                                    >
+                                                        <option value="">
+                                                            {remainingUnits.length === 0 ? 'تمت إضافة كل الوحدات' : '+ اختر وحدة'}
+                                                        </option>
+                                                        {remainingUnits.map(u => (
+                                                            <option key={u.unit} value={u.unit}>{u.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                {activeExtras.length > 0 && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                                                        {activeExtras.map(e => {
+                                                            const info = extraUnitInfo(e.unit);
+                                                            return (
+                                                                <div key={e.unit} style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                                                    <span style={{ minWidth: '150px' }}>{info.name}</span>
+                                                                    <span style={{ fontSize: '14px' }}>السعر:</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={e.price}
+                                                                        onChange={(ev) => setExtraPrice(group.id, e.unit, ev.target.value)}
+                                                                        placeholder="ج.م"
+                                                                        className="linear-price-input"
+                                                                        style={{ width: '90px', padding: '4px 6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                                                        min="0"
+                                                                    />
+                                                                    <span style={{ fontSize: '13px', color: '#666' }}>ج.م / {info.short}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeExtraUnit(group.id, e.unit)}
+                                                                        title="إزالة الوحدة"
+                                                                        style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}
+                                                                    >
+                                                                        <Trash size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <textarea
                                                 value={group.inputText}
                                                 onChange={(e) => updateGroup(group.id, 'inputText', e.target.value)}
@@ -781,8 +934,10 @@ export function Calculator() {
                                                                 <th>#</th>
                                                                 <th>المقاس (سم)</th>
                                                                 <th>العدد</th>
-                                                                <th>المساحة ({type?.unit === 'm2' ? 'م²' : 'م.ط'})</th>
-                                                                {group.isAddLinear && <th>م.ط إضافي</th>}
+                                                                <th>المساحة ({unitLabel(type?.unit)})</th>
+                                                                {activeExtras.map(e => (
+                                                                    <th key={e.unit}>{extraUnitInfo(e.unit).short} إضافي</th>
+                                                                ))}
                                                                 <th>السعر (ج.م)</th>
                                                             </tr>
                                                         </thead>
@@ -792,21 +947,23 @@ export function Calculator() {
                                                                     return (
                                                                         <tr key={r.id} className="preview-row-invalid">
                                                                             <td>{rIdx + 1}</td>
-                                                                            <td colSpan={group.isAddLinear ? 5 : 4} className="error-text">
+                                                                            <td colSpan={4 + activeExtras.length} className="error-text">
                                                                                 تنسيق غير مدعوم: "{r.raw}"
                                                                             </td>
                                                                         </tr>
                                                                     );
                                                                 }
-                                                                const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.isAddLinear, group.linearPrice);
-                                                                const rowPerimeter = ((r.length + r.width) * 2 / 100) * r.qty;
+                                                                const { area, cost, extrasDetail } = calculateRow(r.length, r.width, r.qty, group.typeId, group.extras);
                                                                 return (
                                                                     <tr key={r.id} className="preview-row-valid">
                                                                         <td>{rIdx + 1}</td>
                                                                         <td>{r.length} × {r.width}</td>
                                                                         <td>{r.qty}</td>
                                                                         <td>{area.toFixed(2)}</td>
-                                                                        {group.isAddLinear && <td>{rowPerimeter.toFixed(2)} م.ط</td>}
+                                                                        {activeExtras.map(e => {
+                                                                            const d = extrasDetail.find(x => x.unit === e.unit);
+                                                                            return <td key={e.unit}>{d ? d.measure.toFixed(2) : '-'}</td>;
+                                                                        })}
                                                                         <td>{cost.toFixed(2)}</td>
                                                                     </tr>
                                                                 );
@@ -860,7 +1017,7 @@ export function Calculator() {
                                 const totalQty = activeItems.reduce((sum, item) => sum + item.qty, 0);
                                 estimatedAmount = totalQty * btn.value;
                             }
-                            
+
                             const amountSign = estimatedAmount >= 0 ? '+' : '';
                             const isDiscount = btn.type.startsWith('discount');
 
@@ -989,9 +1146,11 @@ export function Calculator() {
                                                 <td>{item.isPiece ? '-' : item.width}</td>
                                                 <td>{item.qty}</td>
                                                 <td>
-                                                    {item.isPiece ? (item.description || 'بالقطعة') : 
-                                                     item.isAddLinear ? `${item.area.toFixed(2)} م² + ${((item.length + item.width) * 2 / 100 * item.qty).toFixed(2)} م.ط` : 
-                                                     `${item.area.toFixed(2)}`}
+                                                    {item.isPiece
+                                                        ? (item.description || 'بالقطعة')
+                                                        : (item.extras && item.extras.length > 0)
+                                                            ? `${item.area.toFixed(2)} ${unitLabel(item.unit)} + ${extrasText(item)}`
+                                                            : `${item.area.toFixed(2)}`}
                                                 </td>
                                                 <td>{item.cost.toFixed(2)}</td>
                                             </tr>
@@ -1020,9 +1179,11 @@ export function Calculator() {
                                                     <div><span>العرض:</span> <span>{item.width} سم</span></div>
                                                     <div><span>العدد:</span> <span>{item.qty}</span></div>
                                                     <div>
-                                                        <span>المساحة:</span> 
+                                                        <span>المساحة:</span>
                                                         <span>
-                                                            {item.isAddLinear ? `${item.area.toFixed(2)} م² + ${((item.length + item.width) * 2 / 100 * item.qty).toFixed(2)} م.ط` : `${item.area.toFixed(2)}`}
+                                                            {(item.extras && item.extras.length > 0)
+                                                                ? `${item.area.toFixed(2)} ${unitLabel(item.unit)} + ${extrasText(item)}`
+                                                                : `${item.area.toFixed(2)}`}
                                                         </span>
                                                     </div>
                                                 </>
