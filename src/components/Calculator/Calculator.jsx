@@ -247,7 +247,31 @@ export function Calculator() {
                 }));
             }
         }
-        currentRows.push({ id: `${Date.now()}-${Math.random()}`, desc: '', qty: '' });
+        currentRows.push({ id: `${Date.now()}-${Math.random()}`, desc: '', qty: 1 });
+        updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
+    };
+
+    const handlePieceQtyStep = (groupId, index, delta) => {
+        const group = groups.find(g => g.id === groupId);
+        if (!group) return;
+        let currentRows = [];
+        try {
+            if (group.inputText.trim()) {
+                currentRows = JSON.parse(group.inputText);
+            }
+            if (!Array.isArray(currentRows)) currentRows = [];
+        } catch (e) {
+            currentRows = parseMeasurementsText(group.inputText, true).map(r => ({
+                id: r.id,
+                desc: r.description,
+                qty: r.qty
+            }));
+        }
+        if (currentRows[index]) {
+            const cur = Number(currentRows[index].qty) || 0;
+            const next = Math.max(0, cur + delta);
+            currentRows[index].qty = next;
+        }
         updateGroup(groupId, 'inputText', JSON.stringify(currentRows));
     };
 
@@ -727,8 +751,12 @@ export function Calculator() {
                     const groupSubtotal = parsedRows.reduce((acc, r) => {
                         if (!r.isValid) return acc;
                         const { area, cost } = calculateRow(r.length, r.width, r.qty, group.typeId, group.extras);
-                        return { area: acc.area + area, cost: acc.cost + cost };
-                    }, { area: 0, cost: 0 });
+                        return {
+                            area: acc.area + area,
+                            cost: acc.cost + cost,
+                            totalQty: acc.totalQty + (Number(r.qty) || 0)
+                        };
+                    }, { area: 0, cost: 0, totalQty: 0 });
 
                     return (
                         <div key={group.id} className="calculator-group-card">
@@ -757,89 +785,177 @@ export function Calculator() {
 
                             <div className="calculator-group-body">
                                 {isPiece ? (
-                                    <div className="pieces-editor-container" style={{ width: '100%' }}>
-                                        <label className="group-input-label">إدخال بنود القطع:</label>
-                                        <table className="pieces-editor-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
-                                            <thead>
-                                                <tr style={{ textAlign: 'right', borderBottom: '1px solid #ccc' }}>
-                                                    <th style={{ padding: '8px 4px' }}>#</th>
-                                                    <th style={{ padding: '8px 4px' }}>البيان / الوصف (اختياري)</th>
-                                                    <th style={{ padding: '8px 4px', width: '120px' }}>العدد (قطع)</th>
-                                                    <th style={{ padding: '8px 4px' }}>سعر القطعة</th>
-                                                    <th style={{ padding: '8px 4px' }}>الإجمالي</th>
-                                                    <th style={{ padding: '8px 4px', width: '50px' }}>إجراء</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {parsedRows.map((row, idx) => {
-                                                    const itemPrice = type?.price || 0;
-                                                    const totalItemCost = row.qty * itemPrice;
-                                                    return (
-                                                        <tr key={row.id} style={{ borderBottom: '1px solid #eee' }}>
-                                                            <td style={{ padding: '8px 4px' }}>{idx + 1}</td>
-                                                            <td style={{ padding: '8px 4px' }}>
+                                    <div className="pieces-editor-container">
+                                        <div className="pieces-editor-header-bar">
+                                            <label className="group-input-label">إدخال بنود القطع:</label>
+                                            <span className="pieces-count-hint">
+                                                {parsedRows.length > 0 ? `${parsedRows.length} بند` : 'لا توجد بنود'}
+                                            </span>
+                                        </div>
+
+                                        {/* Desktop Table View */}
+                                        <div className="pieces-table-wrapper">
+                                            <table className="pieces-editor-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ width: '40px' }}>#</th>
+                                                        <th>البيان / الوصف (اختياري)</th>
+                                                        <th style={{ width: '120px' }}>العدد (قطع)</th>
+                                                        <th style={{ width: '120px' }}>سعر القطعة</th>
+                                                        <th style={{ width: '120px' }}>الإجمالي</th>
+                                                        <th style={{ width: '50px' }}>إجراء</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {parsedRows.map((row, idx) => {
+                                                        const itemPrice = type?.price || 0;
+                                                        const totalItemCost = (Number(row.qty) || 0) * itemPrice;
+                                                        return (
+                                                            <tr key={row.id}>
+                                                                <td className="piece-col-idx">{idx + 1}</td>
+                                                                <td>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={row.description || ''}
+                                                                        onChange={(e) => handlePieceRowChange(group.id, idx, 'desc', e.target.value)}
+                                                                        placeholder="مثال: مقبض، رف، برواز، شطف..."
+                                                                        className="piece-table-input"
+                                                                    />
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        type="number"
+                                                                        inputMode="numeric"
+                                                                        value={row.qty}
+                                                                        onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10)))}
+                                                                        min="0"
+                                                                        className="piece-table-qty-input"
+                                                                    />
+                                                                </td>
+                                                                <td className="piece-table-price">{itemPrice.toLocaleString()} ج.م</td>
+                                                                <td className="piece-table-total">{totalItemCost.toLocaleString()} ج.م</td>
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemovePieceRow(group.id, idx)}
+                                                                        className="btn-delete-small"
+                                                                        title="حذف البند"
+                                                                    >
+                                                                        <Trash size={16} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Mobile Cards View */}
+                                        <div className="pieces-mobile-cards">
+                                            {parsedRows.map((row, idx) => {
+                                                const itemPrice = type?.price || 0;
+                                                const totalItemCost = (Number(row.qty) || 0) * itemPrice;
+                                                return (
+                                                    <div key={row.id} className="piece-card-item">
+                                                        <div className="piece-card-header">
+                                                            <div className="piece-card-title">
+                                                                <span className="piece-card-index">#{idx + 1}</span>
+                                                                <span className="piece-card-type">{type?.name || 'قطعة'}</span>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemovePieceRow(group.id, idx)}
+                                                                className="piece-card-btn-delete"
+                                                                title="حذف البند"
+                                                            >
+                                                                <Trash size={14} />
+                                                                <span>حذف</span>
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="piece-card-body">
+                                                            <div className="piece-card-field">
+                                                                <label className="piece-card-label">البيان / الوصف (اختياري)</label>
                                                                 <input
                                                                     type="text"
                                                                     value={row.description || ''}
                                                                     onChange={(e) => handlePieceRowChange(group.id, idx, 'desc', e.target.value)}
-                                                                    placeholder="مثال: مقبض، رف، برواز..."
-                                                                    className="piece-desc-input"
-                                                                    style={{ width: '100%', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                                                    placeholder="مثال: مقبض، رف، برواز، شطف..."
+                                                                    className="piece-card-input"
                                                                 />
-                                                            </td>
-                                                            <td style={{ padding: '8px 4px' }}>
-                                                                <input
-                                                                    type="number"
-                                                                    value={row.qty}
-                                                                    onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-                                                                    min="0"
-                                                                    className="piece-qty-input"
-                                                                    style={{ width: '80px', padding: '6px', border: '1px solid #ccc', borderRadius: '4px' }}
-                                                                />
-                                                            </td>
-                                                            <td style={{ padding: '8px 4px' }}>{itemPrice.toLocaleString()} ج.م</td>
-                                                            <td style={{ padding: '8px 4px', fontWeight: 'bold' }}>{totalItemCost.toLocaleString()} ج.م</td>
-                                                            <td style={{ padding: '8px 4px' }}>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemovePieceRow(group.id, idx)}
-                                                                    className="btn-delete-small"
-                                                                    style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}
-                                                                >
-                                                                    <Trash size={16} />
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                                {parsedRows.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: '#666' }}>
-                                                            لا توجد بنود مدخلة بعد. اضغط على الزر بالأسفل لإضافة قطعة.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAddPieceRow(group.id)}
-                                            className="btn-add-piece-row-action"
-                                            style={{
-                                                marginTop: '12px',
-                                                padding: '8px 12px',
-                                                background: '#1976d2',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
-                                        >
-                                            <Plus size={14} /> إضافة بند قطعة جديد
-                                        </button>
+                                                            </div>
+
+                                                            <div className="piece-card-bottom-row">
+                                                                <div className="piece-card-qty-field">
+                                                                    <label className="piece-card-label">العدد (قطع)</label>
+                                                                    <div className="piece-qty-stepper">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="piece-stepper-btn"
+                                                                            onClick={() => handlePieceQtyStep(group.id, idx, -1)}
+                                                                            aria-label="إنقاص العدد"
+                                                                        >
+                                                                            -
+                                                                        </button>
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="numeric"
+                                                                            value={row.qty}
+                                                                            onChange={(e) => handlePieceRowChange(group.id, idx, 'qty', e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value, 10)))}
+                                                                            min="0"
+                                                                            className="piece-stepper-input"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            className="piece-stepper-btn"
+                                                                            onClick={() => handlePieceQtyStep(group.id, idx, 1)}
+                                                                            aria-label="زيادة العدد"
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="piece-card-pricing">
+                                                                    <div className="piece-price-item">
+                                                                        <span className="piece-price-label">سعر القطعة:</span>
+                                                                        <span className="piece-price-val">{itemPrice.toLocaleString()} ج.م</span>
+                                                                    </div>
+                                                                    <div className="piece-price-item piece-price-total">
+                                                                        <span className="piece-price-label">الإجمالي:</span>
+                                                                        <span className="piece-price-val-total">{totalItemCost.toLocaleString()} ج.م</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {parsedRows.length === 0 && (
+                                            <div className="pieces-empty-state">
+                                                <p>لا توجد بنود مدخلة بعد في هذه المجموعة.</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAddPieceRow(group.id)}
+                                                    className="btn-add-piece-first"
+                                                >
+                                                    <Plus size={16} /> إضافة أول بند قطعة
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {parsedRows.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddPieceRow(group.id)}
+                                                className="btn-add-piece-row-action"
+                                            >
+                                                <Plus size={16} /> إضافة بند قطعة جديد
+                                            </button>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
@@ -979,14 +1095,25 @@ export function Calculator() {
 
                             <div className="calculator-group-footer">
                                 <div className="group-subtotals">
-                                    {!isPiece && (
-                                        <span className="subtotal-item">
-                                            المساحة: <strong>{groupSubtotal.area.toFixed(2)} م²</strong>
-                                        </span>
+                                    {isPiece ? (
+                                        <>
+                                            <span className="subtotal-item">
+                                                إجمالي القطع: <strong>{groupSubtotal.totalQty || 0} قطعة</strong>
+                                            </span>
+                                            <span className="subtotal-item">
+                                                السعر: <strong>{groupSubtotal.cost.toFixed(2)} ج.م</strong>
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="subtotal-item">
+                                                المساحة: <strong>{groupSubtotal.area.toFixed(2)} م²</strong>
+                                            </span>
+                                            <span className="subtotal-item">
+                                                السعر: <strong>{groupSubtotal.cost.toFixed(2)} ج.م</strong>
+                                            </span>
+                                        </>
                                     )}
-                                    <span className="subtotal-item">
-                                        السعر: <strong>{groupSubtotal.cost.toFixed(2)} ج.م</strong>
-                                    </span>
                                 </div>
                             </div>
                         </div>

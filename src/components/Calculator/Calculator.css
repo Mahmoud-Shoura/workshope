@@ -319,6 +319,383 @@
     font-size: 14px;
 }
 
+/* Pieces Editor Section */
+.pieces-editor-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pieces-editor-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.pieces-count-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.65;
+    background-color: var(--table-header-bg);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+/* Desktop Table for Pieces */
+.pieces-table-wrapper {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow-x: auto;
+    background-color: var(--input-bg);
+}
+
+.pieces-editor-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+    font-size: 14px;
+}
+
+.pieces-editor-table th {
+    background-color: var(--table-header-bg);
+    padding: 10px 12px;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.pieces-editor-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    color: var(--text-color);
+}
+
+.pieces-editor-table tr:hover {
+    background-color: var(--row-hover);
+}
+
+.piece-col-idx {
+    font-weight: 700;
+    opacity: 0.6;
+    text-align: center;
+}
+
+.piece-table-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.piece-table-qty-input {
+    width: 90px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.piece-table-price {
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--text-color);
+}
+
+.piece-table-total {
+    white-space: nowrap;
+    font-weight: 700;
+    color: var(--button-bg);
+    font-size: 14px;
+}
+
+/* Mobile Cards for Pieces - hidden on desktop */
+.pieces-mobile-cards {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.piece-card-item {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 14px;
+    box-shadow: 0 1px 4px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.piece-card-item:hover,
+.piece-card-item:focus-within {
+    border-color: var(--button-bg);
+}
+
+.piece-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 10px;
+}
+
+.piece-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.piece-card-index {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: var(--button-bg);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+
+.piece-card-type {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.85;
+}
+
+.piece-card-btn-delete {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--delete-color);
+    border: 1px solid rgba(244, 67, 54, 0.25);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.piece-card-btn-delete:hover,
+.piece-card-btn-delete:active {
+    background: var(--delete-color);
+    color: #fff;
+}
+
+.piece-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.piece-card-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.piece-card-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    opacity: 0.85;
+}
+
+.piece-card-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.piece-card-input:focus {
+    border-color: var(--button-bg);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
+}
+
+.piece-card-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background-color: var(--table-header-bg);
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.piece-card-qty-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.piece-qty-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--input-bg);
+    height: 40px;
+}
+
+.piece-stepper-btn {
+    width: 38px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--table-header-bg);
+    color: var(--text-color);
+    font-size: 20px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.piece-stepper-btn:hover,
+.piece-stepper-btn:active {
+    background-color: var(--button-bg);
+    color: #fff;
+}
+
+.piece-stepper-input {
+    width: 50px;
+    height: 40px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 16px;
+    font-weight: 700;
+    outline: none;
+    -moz-appearance: textfield;
+}
+
+.piece-stepper-input::-webkit-outer-spin-button,
+.piece-stepper-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.piece-card-pricing {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+.piece-price-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.85;
+}
+
+.piece-price-val {
+    font-weight: 600;
+}
+
+.piece-price-total {
+    font-size: 13px;
+    opacity: 1;
+}
+
+.piece-price-val-total {
+    color: var(--button-bg);
+    font-weight: 800;
+    font-size: 16px;
+}
+
+/* Empty State & Add Actions */
+.pieces-empty-state {
+    text-align: center;
+    padding: 24px 16px;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    background-color: var(--table-header-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.btn-add-piece-first {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: var(--button-bg);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-add-piece-first:hover {
+    background-color: var(--button-hover);
+}
+
+.btn-add-piece-first:active {
+    transform: scale(0.98);
+}
+
+.btn-add-piece-row-action {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: var(--button-bg);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    margin-top: 6px;
+}
+
+.btn-add-piece-row-action:hover {
+    background-color: var(--button-hover);
+}
+
+.btn-add-piece-row-action:active {
+    transform: scale(0.98);
+}
+
 /* Footer Section */
 .calculator-footer {
     background-color: var(--header-bg);
@@ -704,19 +1081,45 @@
         justify-content: center;
     }
 
+    .calculator-group-card {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
     .calculator-group-body {
         grid-template-columns: 1fr;
         gap: 15px;
+        padding: 12px;
+        max-width: 100%;
+        overflow: hidden;
     }
 
     .group-type-select {
-        max-width: 180px;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
     }
 
     .group-subtotals {
         flex-direction: column;
         gap: 8px;
         align-items: flex-end;
+    }
+
+    /* Pieces Mobile Responsive */
+    .pieces-table-wrapper {
+        display: none;
+    }
+
+    .pieces-mobile-cards {
+        display: flex;
+    }
+
+    .btn-add-piece-row-action {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+        font-size: 15px;
     }
 
     .calculator-footer {
