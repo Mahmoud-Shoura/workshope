@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2, CheckCircle } from 'lucide-react';
+import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2, CheckCircle, Printer } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
+import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
 import './History.css';
 
 // Key used to pass order data to Calculator for editing (avoids race condition with CustomEvent)
@@ -11,6 +12,7 @@ export function History({ onViewChange }) {
     const isEmployee = userRole === 'employee';
     const [selectedCustomerName, setSelectedCustomerName] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [printSheetOrder, setPrintSheetOrder] = useState(null);
 
     /* ── WhatsApp phone formatter ─ handles Egyptian numbers without country code ── */
     const formatPhone = (raw) => {
@@ -100,9 +102,14 @@ export function History({ onViewChange }) {
         }
     };
 
-    /* ── Edit: write order to localStorage then switch to Calculator ── */
+    /* ── Edit: write order to localStorage/sessionStorage then switch to Calculator ── */
     const handleEditOrder = (order) => {
-        localStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
+        try {
+            localStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
+            sessionStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
+        } catch (e) {
+            console.error('Failed to save edit order:', e);
+        }
         if (onViewChange) onViewChange('calculator');
     };
 
@@ -144,9 +151,18 @@ export function History({ onViewChange }) {
             }
         });
 
-        // Convert to array and filter based on search query
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return Object.values(groups);
+
+        // Filter by customer name, phone, or invoice serial number
         return Object.values(groups).filter(customer => {
-            return customer.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesName = customer.customerName.toLowerCase().includes(q);
+            const matchesPhone = (customer.phoneNumber || '').includes(q);
+            const matchesSerial = customer.orders.some(o => {
+                const s = (o.serialNumber || o.serial_number || '').toLowerCase();
+                return s.includes(q);
+            });
+            return matchesName || matchesPhone || matchesSerial;
         });
     };
 
@@ -172,7 +188,14 @@ export function History({ onViewChange }) {
     // 1. Render Detailed Customer View
     if (selectedCustomer) {
         // Sort orders of this customer by date descending
-        const sortedOrders = [...selectedCustomer.orders].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const allCustomerOrders = [...selectedCustomer.orders].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const q = searchQuery.trim().toLowerCase();
+        const sortedOrders = allCustomerOrders.filter(o => {
+            if (!q) return true;
+            const serial = (o.serialNumber || o.serial_number || '').toLowerCase();
+            const date = new Date(o.date).toLocaleDateString('ar-EG');
+            return serial.includes(q) || date.includes(q);
+        });
 
         return (
             <div className="history-container">
@@ -212,14 +235,26 @@ export function History({ onViewChange }) {
                     </div>
                 )}
 
-                <h3>تفاصيل الفواتير والمعاملات</h3>
+                <div className="customer-orders-header-row">
+                    <h3>تفاصيل الفواتير والمعاملات</h3>
+                    <div className="search-bar-inline">
+                        <Search size={16} className="search-icon" />
+                        <input
+                            type="text"
+                            placeholder="بحث برقم الفاتورة أو التاريخ..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="search-input-small"
+                        />
+                    </div>
+                </div>
 
                 {/* Desktop View */}
                 <div className="history-table-wrapper">
                     <table className="history-table">
                         <thead>
                             <tr>
-                                <th>التاريخ</th>
+                                <th>الفاتورة والتاريخ</th>
                                 <th>البيان والقياسات</th>
                                 <th>الصنف / الخامة</th>
                                 <th>تفاصيل الحساب</th>
@@ -235,9 +270,11 @@ export function History({ onViewChange }) {
                                     : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
                                 const phone = order.customer_phone || order.phoneNumber;
                                 const baseCost = order.baseCost || order.base_cost;
+                                const serial = order.serialNumber || order.serial_number;
                                 return (
                                     <tr key={order.id}>
                                         <td className="history-date">
+                                            {serial && <div className="history-serial-pill">{serial}</div>}
                                             <div>{new Date(order.date).toLocaleDateString('ar-EG')}</div>
                                             <div className="time-sub">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</div>
                                         </td>
@@ -282,6 +319,13 @@ export function History({ onViewChange }) {
                                         </td>
                                         <td className="history-actions-cell">
                                             <div className="actions-flex">
+                                                <button
+                                                    onClick={() => setPrintSheetOrder(order)}
+                                                    className="btn-print-small"
+                                                    title="كشف الطباعة و PDF"
+                                                >
+                                                    <Printer size={16} />
+                                                </button>
                                                 {rem > 0 ? (
                                                     <button
                                                         onClick={() => handleMarkPaid(order)}
@@ -336,10 +380,12 @@ export function History({ onViewChange }) {
                         const rem = order.remaining_balance !== undefined ? Number(order.remaining_balance)
                             : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
                         const phone = order.customer_phone || order.phoneNumber;
+                        const serial = order.serialNumber || order.serial_number;
                         return (
                             <div key={order.id} className="history-card">
                                 <div className="history-card-header">
                                     <div>
+                                        {serial && <span className="history-card-serial-badge">{serial}</span>}
                                         <p className="history-card-date">
                                             {new Date(order.date).toLocaleDateString('ar-EG')} - {new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
                                         </p>
@@ -349,6 +395,13 @@ export function History({ onViewChange }) {
                                             {totalCost.toLocaleString()} ج.م
                                         </div>
                                         <div className="actions-flex">
+                                            <button
+                                                onClick={() => setPrintSheetOrder(order)}
+                                                className="btn-print-card"
+                                                title="كشف الطباعة و PDF"
+                                            >
+                                                <Printer size={18} />
+                                            </button>
                                             {rem > 0 ? (
                                                 <button
                                                     onClick={() => handleMarkPaid(order)}
@@ -429,6 +482,24 @@ export function History({ onViewChange }) {
                         );
                     })}
                 </div>
+
+                {/* Print Sheet Modal */}
+                <PrintSheetModal
+                    isOpen={!!printSheetOrder}
+                    onClose={() => setPrintSheetOrder(null)}
+                    customerName={printSheetOrder?.customer_name || printSheetOrder?.customerName}
+                    phoneNumber={printSheetOrder?.customer_phone || printSheetOrder?.phoneNumber}
+                    orderDate={printSheetOrder?.date}
+                    serialNumber={printSheetOrder?.serialNumber || printSheetOrder?.serial_number || '#INV-1001'}
+                    items={printSheetOrder?.items || []}
+                    baseCost={printSheetOrder?.baseCost ?? printSheetOrder?.base_cost ?? 0}
+                    totalArea={printSheetOrder?.totalArea ?? printSheetOrder?.total_area ?? 0}
+                    adjustments={printSheetOrder?.adjustments || []}
+                    totalCost={printSheetOrder?.total_cost || printSheetOrder?.totalCost || 0}
+                    deposit={printSheetOrder?.deposit || 0}
+                    remainingBalance={printSheetOrder?.remaining_balance ?? printSheetOrder?.remainingBalance}
+                    printSettings={printSettings}
+                />
             </div>
         );
     }
@@ -443,7 +514,7 @@ export function History({ onViewChange }) {
                 <Search size={18} className="search-icon" />
                 <input
                     type="text"
-                    placeholder="ابحث عن اسم العميل..."
+                    placeholder="ابحث باسم العميل، الهاتف، أو رقم الفاتورة (مثال: #INV-1001)..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="search-input"

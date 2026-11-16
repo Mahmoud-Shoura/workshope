@@ -1,0 +1,495 @@
+/* Printable Sheet Modal & Document Styles */
+.printable-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 15px;
+    overflow-y: auto;
+    backdrop-filter: blur(3px);
+}
+
+.printable-sheet-modal {
+    background-color: var(--input-bg, #fff);
+    color: var(--text-color, #333);
+    border-radius: 8px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 94vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    border: 1px solid var(--border-color, #ddd);
+}
+
+/* Modal Header Bar */
+.sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background-color: var(--header-bg, #f5f5f5);
+    border-bottom: 1px solid var(--border-color, #ddd);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sheet-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sheet-header-title-row h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.sheet-modal-serial-badge {
+    background: rgba(37, 211, 102, 0.15);
+    color: #128c7e;
+    font-weight: 800;
+    font-size: 13px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(37, 211, 102, 0.3);
+}
+
+.sheet-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* WhatsApp PDF Share Button */
+.btn-share-pdf-modal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3);
+}
+
+.btn-share-pdf-modal:hover:not(:disabled) {
+    background-color: #20ba5a;
+    transform: translateY(-1px);
+}
+
+.btn-share-pdf-modal:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.btn-print-modal {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-print-modal:hover {
+    background-color: #1565c0;
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    color: var(--text-color, #666);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-close-modal:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.spin-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Document Content Body */
+.sheet-content {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    background-color: #fff;
+    color: #222;
+    font-size: 14px;
+}
+
+.sheet-print-title {
+    text-align: center;
+    border-bottom: 2px solid #222;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+
+.sheet-print-title h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #111;
+    margin: 0 0 4px 0;
+}
+
+.sheet-print-title p {
+    font-size: 13px;
+    color: #555;
+    margin: 0;
+}
+
+/* Opposite 2-Box Grid Layout */
+.sheet-opposite-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.sheet-card-box {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fdfdfd;
+    overflow: hidden;
+}
+
+.customer-box {
+    border-right: 4px solid #1976d2;
+}
+
+.workshop-box {
+    border-right: 4px solid #4CAF50;
+}
+
+.box-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f4f6f8;
+    border-bottom: 1px solid #e1e4e8;
+    font-weight: 700;
+    font-size: 13px;
+    color: #333;
+}
+
+.box-serial-pill {
+    background-color: #1976d2;
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.box-content {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.box-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 4px;
+}
+
+.box-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.b-label {
+    color: #666;
+    font-weight: 600;
+}
+
+.b-val {
+    color: #111;
+}
+
+.highlight-serial {
+    color: #1976d2;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.phone-text {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Table */
+.sheet-table-wrapper {
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.sheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: right;
+}
+
+.sheet-table th {
+    background-color: #eef2f5;
+    padding: 9px 8px;
+    border-bottom: 2px solid #ccc;
+    border-left: 1px solid #ddd;
+    color: #222;
+    font-weight: 700;
+}
+
+.sheet-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    border-left: 1px solid #eee;
+    color: #333;
+}
+
+.sheet-table td:last-child,
+.sheet-table th:last-child {
+    border-left: none;
+}
+
+.item-type-cell {
+    font-weight: 700;
+}
+
+/* Sheet Totals */
+.sheet-totals {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px 16px;
+    background-color: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.totals-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    padding: 3px 0;
+}
+
+.sheet-adjustment-row {
+    color: #555;
+    font-size: 13px;
+    background-color: rgba(0, 0, 0, 0.02);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.text-discount {
+    color: #d32f2f;
+    font-weight: 700;
+}
+
+.text-fee {
+    color: #1976d2;
+    font-weight: 700;
+}
+
+.total-price-row {
+    border-top: 2px solid #333;
+    padding-top: 8px;
+    margin-top: 4px;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.sheet-deposit-row {
+    border-top: 1px dashed #ccc;
+    padding-top: 6px;
+}
+
+.sheet-remaining-row {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.text-green {
+    color: #2e7d32;
+    font-weight: 700;
+}
+
+.text-red {
+    color: #c62828;
+    font-weight: 800;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+/* Sheet Footer Note */
+.sheet-footer-note {
+    text-align: center;
+    border-top: 1px solid #ccc;
+    padding-top: 12px;
+    color: #666;
+    font-size: 12px;
+}
+
+/* Mobile responsive in-browser viewing */
+.sheet-mobile-list {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .sheet-opposite-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .sheet-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sheet-header-buttons {
+        width: 100%;
+    }
+
+    .btn-share-pdf-modal,
+    .btn-print-modal {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .sheet-table-wrapper {
+        display: none;
+    }
+
+    .sheet-mobile-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .sheet-mobile-item {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 10px 12px;
+    }
+
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px dashed #dee2e6;
+        padding-bottom: 6px;
+        margin-bottom: 8px;
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .item-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+    }
+
+    .item-details > div {
+        display: flex;
+        justify-content: space-between;
+    }
+}
+
+/* Print CSS */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .printable-sheet-overlay {
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .printable-sheet-modal {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .printable-sheet-modal,
+    .printable-sheet-modal * {
+        visibility: visible !important;
+    }
+
+    .sheet-content {
+        padding: 0 !important;
+        background-color: #fff !important;
+        color: #000 !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* Force opposite 2-column grid in print */
+    .sheet-opposite-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px !important;
+    }
+
+    /* Force desktop table in print */
+    .sheet-table-wrapper {
+        display: block !important;
+    }
+
+    .sheet-mobile-list {
+        display: none !important;
+    }
+}
+

@@ -507,6 +507,91 @@
     transform: scale(1.05);
 }
 
+/* Print Button in History */
+.btn-print-small,
+.btn-print-card {
+    background-color: #0284c7;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.btn-print-card {
+    border-radius: 6px;
+    padding: 7px 12px;
+}
+
+.btn-print-small:hover,
+.btn-print-card:hover {
+    background-color: #0369a1;
+    transform: scale(1.05);
+}
+
+/* Serial Number Badges in History */
+.history-serial-pill {
+    display: inline-block;
+    background-color: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+    font-weight: 800;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    border: 1px solid rgba(2, 132, 199, 0.25);
+    letter-spacing: 0.5px;
+}
+
+.history-card-serial-badge {
+    display: inline-block;
+    background-color: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+.customer-orders-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0 12px 0;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.customer-orders-header-row h3 {
+    margin: 0;
+}
+
+.search-bar-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--input-bg, #fff);
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+
+.search-input-small {
+    border: none !important;
+    background: transparent !important;
+    padding: 4px !important;
+    font-size: 13px !important;
+    outline: none !important;
+    width: 200px;
+    color: var(--text-color);
+}
+
 
 .history-card-items {
     display: flex;

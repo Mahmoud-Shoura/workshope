@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash, Save, Printer, MessageCircle, FilePlus, Edit2 } from 'lucide-react';
-import { useGlassStore } from '../../hooks/useGlassStore';
+import { Plus, Trash, Save, Printer, MessageCircle, FilePlus, Edit2, BookUser } from 'lucide-react';
+import { useGlassStore, generateSerialNumber } from '../../hooks/useGlassStore';
+import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
 import './Calculator.css';
 
 const DRAFT_KEY = 'calculator_draft';
@@ -71,20 +72,29 @@ export function Calculator() {
     const [showPrintSheet, setShowPrintSheet] = useState(false);
     const [activeButtons, setActiveButtons] = useState(() => loadDraft()?.activeButtons || []);
     const [editingOrderId, setEditingOrderId] = useState(() => loadDraft()?.editingOrderId || null);
+    const [invoiceSerial, setInvoiceSerial] = useState(() => loadDraft()?.invoiceSerial || '');
 
     // Persist draft to localStorage whenever state changes
     useEffect(() => {
-        const draft = { groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId };
+        const draft = { groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial };
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    }, [groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId]);
+    }, [groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial]);
+
+    // Auto-generate serial number if empty for new order
+    useEffect(() => {
+        if (!invoiceSerial && !editingOrderId && orders?.length !== undefined) {
+            setInvoiceSerial(generateSerialNumber(orders));
+        }
+    }, [orders, invoiceSerial, editingOrderId]);
 
     // ── On mount: check if History left an order for editing ──
     useEffect(() => {
-        const raw = localStorage.getItem(EDIT_ORDER_KEY);
+        const raw = localStorage.getItem(EDIT_ORDER_KEY) || sessionStorage.getItem(EDIT_ORDER_KEY);
         if (!raw) return;
         try {
             const order = JSON.parse(raw);
             localStorage.removeItem(EDIT_ORDER_KEY);
+            sessionStorage.removeItem(EDIT_ORDER_KEY);
             // Rebuild groups from order items
             const groupMap = {};
             (order.items || []).forEach(item => {
@@ -123,13 +133,44 @@ export function Calculator() {
             setPhoneNumber(order.customer_phone || order.phoneNumber || '');
             setDeposit(String(order.deposit || ''));
             setOrderDate(order.date ? order.date.split('T')[0] : new Date().toISOString().split('T')[0]);
-            setActiveButtons([]);
+            
+            // Restore active buttons and adjustments!
+            const restoredButtons = order.activeButtons?.length
+                ? order.activeButtons
+                : (order.adjustments ? order.adjustments.map(a => a.id) : []);
+            setActiveButtons(restoredButtons);
+
+            setInvoiceSerial(order.serialNumber || order.serial_number || generateSerialNumber(orders));
             setEditingOrderId(order.id);
         } catch (err) {
             console.error('Failed to load edit order', err);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // run once on mount only
+
+    // ── Contact Picker API (Phone / Gmail contacts on mobile) ──
+    const handlePickContact = async () => {
+        if ('contacts' in navigator && 'ContactsManager' in window) {
+            try {
+                const props = ['name', 'tel'];
+                const contacts = await navigator.contacts.select(props, { multiple: false });
+                if (contacts && contacts.length > 0) {
+                    const c = contacts[0];
+                    if (c.tel && c.tel.length > 0) {
+                        const clean = c.tel[0].replace(/[\s\-\(\)]/g, '');
+                        setPhoneNumber(clean);
+                    }
+                    if (c.name && c.name.length > 0 && !customerName) {
+                        setCustomerName(c.name[0]);
+                    }
+                }
+            } catch (err) {
+                console.log('Contacts picker cancelled:', err);
+            }
+        } else {
+            alert('خاصية الوصول لأسماء الهاتف (Contact Picker) مدعومة في متصفح Chrome على الهواتف الذكية (Android).\nيمكنك كتابة رقم الهاتف مباشرة.');
+        }
+    };
 
     // ── Build unique customer list for autocomplete ──
     const knownCustomers = React.useMemo(() => {
@@ -173,6 +214,7 @@ export function Calculator() {
             setOrderDate(new Date().toISOString().split('T')[0]);
             setActiveButtons([]);
             setEditingOrderId(null);
+            setInvoiceSerial(generateSerialNumber(orders));
             localStorage.removeItem(DRAFT_KEY);
         }
     };
@@ -625,36 +667,44 @@ export function Calculator() {
         const selectedDate = new Date(orderDate);
         selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
+        const currentSerial = invoiceSerial || generateSerialNumber(orders);
+
         if (editingOrderId) {
             // Update existing order
             await updateOrder(editingOrderId, {
-                customerName,
-                customerPhone: phoneNumber,
+                customerName: customerName.trim(),
+                customerPhone: phoneNumber.trim(),
+                phoneNumber: phoneNumber.trim(),
                 items: activeItems,
                 baseCost,
                 totalCost: totalCostWithAdjustments,
                 totalArea: totals.area,
                 adjustments,
+                activeButtons,
+                serialNumber: currentSerial,
                 deposit: Number(deposit || 0),
                 remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
             });
-            alert('تم تحديث الفاتورة بنجاح!');
+            alert(`تم تحديث الفاتورة (${currentSerial}) بنجاح! ✅`);
             setEditingOrderId(null);
         } else {
             // Save new order
             await saveOrder({
-                customerName,
-                phoneNumber,
+                customerName: customerName.trim(),
+                customerPhone: phoneNumber.trim(),
+                phoneNumber: phoneNumber.trim(),
                 items: activeItems,
                 baseCost,
                 totalCost: totalCostWithAdjustments,
                 totalArea: totals.area,
                 adjustments,
+                activeButtons,
+                serialNumber: currentSerial,
                 deposit: Number(deposit || 0),
                 remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
                 date: selectedDate.toISOString()
             });
-            alert('تم حفظ الطلب بنجاح! ✅ الفاتورة لا تزال موجودة في الشاشة.');
+            alert(`تم حفظ الطلب بنجاح! ✅ رقم الفاتورة: ${currentSerial}`);
         }
         // Do NOT clear the form - user can clear manually via "فاتورة جديدة"
     };
@@ -663,12 +713,18 @@ export function Calculator() {
         <div className="calculator-container">
             {/* Header */}
             <div className="calculator-header no-print">
-                {editingOrderId && (
-                    <div className="edit-mode-banner">
-                        <Edit2 size={16} />
-                        <span>وضع التعديل — أنت تعدّل على فاتورة محفوظة</span>
+                <div className="calculator-header-top-row">
+                    <div className="invoice-serial-tag" title="رقم الفاتورة الحالي">
+                        <span className="serial-tag-label">رقم الفاتورة:</span>
+                        <strong className="serial-tag-value">{invoiceSerial || '#INV-1001'}</strong>
                     </div>
-                )}
+                    {editingOrderId && (
+                        <div className="edit-mode-banner">
+                            <Edit2 size={16} />
+                            <span>وضع التعديل — أنت تعدّل على فاتورة محفوظة</span>
+                        </div>
+                    )}
+                </div>
                 <div className="calculator-inputs">
                     {/* Customer Name with Autocomplete */}
                     <div className="autocomplete-wrapper" style={{ flex: 1, minWidth: 180, position: 'relative' }}>
@@ -693,14 +749,26 @@ export function Calculator() {
                             </ul>
                         )}
                     </div>
-                    <input
-                        type="tel"
-                        placeholder="رقم الهاتف (واتساب)"
-                        value={phoneNumber}
-                        onChange={e => setPhoneNumber(e.target.value)}
-                        dir="ltr"
-                        style={{ flex: 1, minWidth: 150 }}
-                    />
+                    {/* Customer Phone with Contact Picker */}
+                    <div className="phone-picker-wrapper" style={{ flex: 1.2, minWidth: 200, display: 'flex', gap: '6px' }}>
+                        <input
+                            type="tel"
+                            placeholder="رقم الهاتف (واتساب)"
+                            value={phoneNumber}
+                            onChange={e => setPhoneNumber(e.target.value)}
+                            dir="ltr"
+                            style={{ flex: 1 }}
+                        />
+                        <button
+                            type="button"
+                            onClick={handlePickContact}
+                            className="btn-pick-contact-quick"
+                            title="اختيار من جهات الاتصال المسجلة على الهاتف وجيميل"
+                        >
+                            <BookUser size={16} />
+                            <span>الأسماء</span>
+                        </button>
+                    </div>
                     <input
                         type="number"
                         placeholder="العربون / المقدم المدفوع (ج.م)"
@@ -1206,157 +1274,22 @@ export function Calculator() {
             </div>
 
             {/* Printable Sheet Overlay Modal */}
-            {showPrintSheet && (
-                <div className="printable-sheet-overlay">
-                    <div className="printable-sheet-modal print-area">
-                        <div className="sheet-header no-print">
-                            <h3>شيت معاينة كشف المقاسات والطباعة</h3>
-                            <div className="sheet-header-buttons">
-                                <button onClick={() => window.print()} className="btn-print-modal">
-                                    <Printer size={16} />
-                                    طباعة الكشف
-                                </button>
-                                <button onClick={() => setShowPrintSheet(false)} className="btn-close-modal">
-                                    إغلاق
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="sheet-content">
-                            <div className="sheet-print-title">
-                                <h2>{printSettings?.workshop_name || 'ورشة العمل الحديثة'}</h2>
-                                <p>{printSettings?.tax_number ? `الرقم الضريبي: ${printSettings.tax_number}` : 'كشف تفصيلي بالقياسات وحسابات العميل'}</p>
-                            </div>
-
-                            <div className="sheet-info-grid">
-                                <div>
-                                    <strong>اسم العميل:</strong> {customerName || 'عميل نقدي'}
-                                </div>
-                                <div>
-                                    <strong>رقم الهاتف:</strong> {phoneNumber || printSettings?.phone || '-'}
-                                </div>
-                                <div>
-                                    <strong>التاريخ:</strong> {new Date(orderDate).toLocaleDateString('ar-EG')}
-                                </div>
-                                {printSettings?.address && (
-                                    <div style={{ gridColumn: 'span 2' }}>
-                                        <strong>العنوان:</strong> {printSettings.address}
-                                    </div>
-                                )}
-                                {printSettings?.owner_name && (
-                                    <div>
-                                        <strong>صاحب العمل:</strong> {printSettings.owner_name}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Desktop Wide Landscape Sheet (Excel style) */}
-                            <div className="sheet-table-wrapper">
-                                <table className="sheet-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>الصنف / الخامة</th>
-                                            <th>الطول (سم)</th>
-                                            <th>العرض (سم)</th>
-                                            <th>العدد</th>
-                                            <th>المساحة / الوصف</th>
-                                            <th>السعر (ج.م)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {activeItems.map((item, idx) => (
-                                            <tr key={item.id}>
-                                                <td>{idx + 1}</td>
-                                                <td>{item.typeName}</td>
-                                                <td>{item.isPiece ? '-' : item.length}</td>
-                                                <td>{item.isPiece ? '-' : item.width}</td>
-                                                <td>{item.qty}</td>
-                                                <td>
-                                                    {item.isPiece
-                                                        ? (item.description || 'بالقطعة')
-                                                        : (item.extras && item.extras.length > 0)
-                                                            ? `${item.area.toFixed(2)} ${unitLabel(item.unit)} + ${extrasText(item)}`
-                                                            : `${item.area.toFixed(2)}`}
-                                                </td>
-                                                <td>{item.cost.toFixed(2)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Portrait Sheet (List/Card style) */}
-                            <div className="sheet-mobile-list no-print">
-                                {activeItems.map((item, idx) => (
-                                    <div key={item.id} className="sheet-mobile-item">
-                                        <div className="item-header">
-                                            <span className="item-index">#{idx + 1}</span>
-                                            <span className="item-type">{item.typeName}</span>
-                                        </div>
-                                        <div className="item-details">
-                                            {item.isPiece ? (
-                                                <>
-                                                    {item.description && <div><span>البيان:</span> <span>{item.description}</span></div>}
-                                                    <div><span>الكمية:</span> <span>{item.qty} قطعة</span></div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div><span>الطول:</span> <span>{item.length} سم</span></div>
-                                                    <div><span>العرض:</span> <span>{item.width} سم</span></div>
-                                                    <div><span>العدد:</span> <span>{item.qty}</span></div>
-                                                    <div>
-                                                        <span>المساحة:</span>
-                                                        <span>
-                                                            {(item.extras && item.extras.length > 0)
-                                                                ? `${item.area.toFixed(2)} ${unitLabel(item.unit)} + ${extrasText(item)}`
-                                                                : `${item.area.toFixed(2)}`}
-                                                        </span>
-                                                    </div>
-                                                </>
-                                            )}
-                                            <div><span>السعر:</span> <span>{item.cost.toFixed(2)} ج.م</span></div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="sheet-totals">
-                                <div className="totals-row">
-                                    <span>إجمالي المساحة:</span>
-                                    <strong>{totals.area.toFixed(2)} م²</strong>
-                                </div>
-                                <div className="totals-row">
-                                    <span>الحساب الأساسي:</span>
-                                    <strong>{baseCost.toFixed(2)} ج.م</strong>
-                                </div>
-                                {adjustments.map(adj => (
-                                    <div key={adj.id} className="totals-row sheet-adjustment-row">
-                                        <span>{adj.name}:</span>
-                                        <strong>{adj.amount >= 0 ? '+' : ''}{adj.amount.toFixed(2)} ج.م</strong>
-                                    </div>
-                                ))}
-                                <div className="totals-row total-price-row">
-                                    <span>الحساب الإجمالي المطلوب:</span>
-                                    <strong>{totalCostWithAdjustments.toFixed(2)} ج.م</strong>
-                                </div>
-                                <div className="totals-row sheet-deposit-row" style={{ borderTop: '1px dashed #ccc', paddingTop: '8px' }}>
-                                    <span>العربون / المقدم:</span>
-                                    <strong>{(Number(deposit || 0)).toFixed(2)} ج.م</strong>
-                                </div>
-                                <div className="totals-row sheet-remaining-row" style={{ fontWeight: 'bold' }}>
-                                    <span>المتبقي للاستلام:</span>
-                                    <strong style={{ color: '#c62828' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.م</strong>
-                                </div>
-                            </div>
-
-                            <div className="sheet-footer-note">
-                                <p>{printSettings?.footer_note || `نشكركم لتعاملكم معنا - ${printSettings?.workshop_name || 'ورشة العمل الحديثة'}`}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <PrintSheetModal
+                isOpen={showPrintSheet}
+                onClose={() => setShowPrintSheet(false)}
+                customerName={customerName}
+                phoneNumber={phoneNumber}
+                orderDate={orderDate}
+                serialNumber={invoiceSerial || generateSerialNumber(orders)}
+                items={activeItems}
+                baseCost={baseCost}
+                totalArea={totals.area}
+                adjustments={adjustments}
+                totalCost={totalCostWithAdjustments}
+                deposit={deposit}
+                remainingBalance={totalCostWithAdjustments - Number(deposit || 0)}
+                printSettings={printSettings}
+            />
         </div>
     );
 }

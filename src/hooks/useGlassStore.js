@@ -1,6 +1,45 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
+export const generateSerialNumber = (orders = []) => {
+    let maxNum = 1000;
+    (orders || []).forEach(o => {
+        const str = o.serialNumber || o.serial_number || '';
+        const match = str.match(/\d+/);
+        if (match) {
+            const n = parseInt(match[0], 10);
+            if (n > maxNum && n < 1000000) maxNum = n;
+        }
+    });
+    return `#INV-${maxNum + 1}`;
+};
+
+export const normalizeOrder = (o, index = 0, totalOrders = 1) => {
+    if (!o) return o;
+    let meta = {};
+    if (o.status && typeof o.status === 'string' && o.status.trim().startsWith('{')) {
+        try {
+            meta = JSON.parse(o.status);
+        } catch (e) {
+            meta = {};
+        }
+    }
+    const fallbackSerial = `#INV-${1000 + (totalOrders - index)}`;
+    const serialNumber = meta.serialNumber || o.serial_number || o.serialNumber || fallbackSerial;
+    return {
+        ...o,
+        status: meta.status || o.status || 'pending',
+        serialNumber,
+        serial_number: serialNumber,
+        adjustments: o.adjustments || meta.adjustments || [],
+        activeButtons: o.activeButtons || meta.activeButtons || [],
+        baseCost: o.base_cost ?? meta.baseCost ?? o.baseCost ?? 0,
+        base_cost: o.base_cost ?? meta.baseCost ?? o.baseCost ?? 0,
+        totalArea: o.total_area ?? meta.totalArea ?? o.totalArea ?? 0,
+        total_area: o.total_area ?? meta.totalArea ?? o.totalArea ?? 0,
+    };
+};
+
 const GlassStoreContext = createContext(null);
 
 export function GlassStoreProvider({ children }) {
@@ -149,7 +188,9 @@ function useGlassStoreInternal() {
 
             setGlassTypes(types || []);
             setCustomButtons(buttons || []);
-            setOrders(dbOrders || []);
+            const rawOrders = dbOrders || [];
+            const normalizedOrders = rawOrders.map((o, idx) => normalizeOrder(o, idx, rawOrders.length));
+            setOrders(normalizedOrders);
             if (print) setPrintSettings(print);
 
         } catch (err) {
@@ -314,24 +355,52 @@ function useGlassStoreInternal() {
 
     // Orders CRUD
     const saveOrder = async (order) => {
-        if (!activeWorkshop) return;
+        if (!activeWorkshop) return null;
+        const serialNumber = order.serialNumber || order.serial_number || generateSerialNumber(orders);
+        const meta = {
+            status: order.status || 'pending',
+            serialNumber,
+            adjustments: order.adjustments || [],
+            activeButtons: order.activeButtons || [],
+            baseCost: Number(order.baseCost || 0),
+            totalArea: Number(order.totalArea || 0),
+        };
+
+        const phone = order.customerPhone || order.phoneNumber || '';
+
+        const insertPayload = {
+            workshop_id: activeWorkshop.id,
+            customer_name: order.customerName,
+            customer_phone: phone,
+            total_cost: Number(order.totalCost),
+            deposit: Number(order.deposit || 0),
+            remaining_balance: Number(order.remainingBalance || 0),
+            items: order.items || [],
+            payment_history: order.paymentHistory || [],
+            status: JSON.stringify(meta),
+            date: order.date || new Date().toISOString()
+        };
+
         const { data, error } = await supabase
             .from('orders')
-            .insert({
-                workshop_id: activeWorkshop.id,
-                customer_name: order.customerName,
-                customer_phone: order.customerPhone,
-                total_cost: Number(order.totalCost),
-                deposit: Number(order.deposit || 0),
-                remaining_balance: Number(order.remainingBalance || 0),
-                items: order.items || [],
-                payment_history: [],
-                date: order.date || new Date().toISOString()
-            })
+            .insert(insertPayload)
             .select()
             .single();
-        if (!error && data) {
-            setOrders(prev => [data, ...prev]);
+
+        if (error) {
+            console.error('saveOrder error:', error);
+            alert('حدث خطأ أثناء حفظ الفاتورة: ' + error.message);
+            return null;
+        }
+
+        if (data) {
+            const normalized = normalizeOrder({
+                ...data,
+                ...meta,
+                customer_phone: phone,
+            });
+            setOrders(prev => [normalized, ...prev]);
+            return normalized;
         }
     };
 
@@ -414,32 +483,47 @@ function useGlassStoreInternal() {
             return;
         }
 
-        setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, ...data } : o)));
+        setOrders(prev => prev.map(o => (o.id === orderId ? normalizeOrder({ ...o, ...data, remaining_balance: 0 }) : o)));
     };
 
     const updateOrder = async (orderId, updatedFields) => {
-        // Map camelCase fields from frontend if any
+        const order = orders.find(o => o.id === orderId);
+        if (!order) return null;
+
         const dbFields = {};
         if (updatedFields.customerName !== undefined) dbFields.customer_name = updatedFields.customerName;
-        if (updatedFields.customerPhone !== undefined) dbFields.customer_phone = updatedFields.customerPhone;
+        if (updatedFields.customerPhone !== undefined || updatedFields.phoneNumber !== undefined) {
+            dbFields.customer_phone = updatedFields.customerPhone || updatedFields.phoneNumber;
+        }
         if (updatedFields.totalCost !== undefined) dbFields.total_cost = Number(updatedFields.totalCost);
         if (updatedFields.deposit !== undefined) dbFields.deposit = Number(updatedFields.deposit);
         if (updatedFields.items !== undefined) dbFields.items = updatedFields.items;
         if (updatedFields.paymentHistory !== undefined) dbFields.payment_history = updatedFields.paymentHistory;
-        if (updatedFields.baseCost !== undefined) dbFields.base_cost = Number(updatedFields.baseCost);
-        if (updatedFields.totalArea !== undefined) dbFields.total_area = Number(updatedFields.totalArea);
-        if (updatedFields.adjustments !== undefined) dbFields.adjustments = updatedFields.adjustments;
+        if (updatedFields.date !== undefined) dbFields.date = updatedFields.date;
 
-        // Fetch local order object to calculate remaining balance
-        const order = orders.find(o => o.id === orderId);
-        if (!order) return;
+        const serialNumber = updatedFields.serialNumber || updatedFields.serial_number || order.serialNumber || generateSerialNumber(orders);
+        const adjustments = updatedFields.adjustments !== undefined ? updatedFields.adjustments : (order.adjustments || []);
+        const activeButtons = updatedFields.activeButtons !== undefined ? updatedFields.activeButtons : (order.activeButtons || []);
+        const baseCost = updatedFields.baseCost !== undefined ? Number(updatedFields.baseCost) : (order.baseCost || 0);
+        const totalArea = updatedFields.totalArea !== undefined ? Number(updatedFields.totalArea) : (order.totalArea || 0);
 
-        const merged = { ...order, ...dbFields };
-        const originalDeposit = Number(merged.deposit || 0);
-        const additionalPaid = (merged.payment_history || []).reduce((sum, p) => sum + Number(p.amount), 0);
+        const meta = {
+            status: updatedFields.status || order.status || 'pending',
+            serialNumber,
+            adjustments,
+            activeButtons,
+            baseCost,
+            totalArea
+        };
+        dbFields.status = JSON.stringify(meta);
+
+        const originalDeposit = Number(updatedFields.deposit !== undefined ? updatedFields.deposit : order.deposit || 0);
+        const totalCostVal = Number(updatedFields.totalCost !== undefined ? updatedFields.totalCost : order.total_cost || 0);
+        const history = updatedFields.paymentHistory !== undefined ? updatedFields.paymentHistory : (order.payment_history || []);
+        const additionalPaid = history.reduce((sum, p) => sum + Number(p.amount), 0);
         const totalPaid = originalDeposit + additionalPaid;
-        merged.remaining_balance = Math.max(0, Number(merged.total_cost || 0) - totalPaid);
-        dbFields.remaining_balance = merged.remaining_balance;
+        const newRemaining = Math.max(0, totalCostVal - totalPaid);
+        dbFields.remaining_balance = newRemaining;
 
         const { error } = await supabase
             .from('orders')
@@ -447,7 +531,18 @@ function useGlassStoreInternal() {
             .eq('id', orderId);
 
         if (!error) {
+            const merged = normalizeOrder({
+                ...order,
+                ...dbFields,
+                ...meta,
+                remaining_balance: newRemaining
+            });
             setOrders(prev => prev.map(o => (o.id === orderId ? merged : o)));
+            return merged;
+        } else {
+            console.error('updateOrder error:', error);
+            alert('حدث خطأ أثناء تحديث الفاتورة: ' + error.message);
+            return null;
         }
     };
 

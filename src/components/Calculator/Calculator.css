@@ -20,6 +20,68 @@
     box-shadow: 0 1px 3px var(--shadow);
 }
 
+/* Calculator Top Row with Invoice Serial Badge */
+.calculator-header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.invoice-serial-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--table-header-bg);
+    border: 1px solid var(--border-color);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.serial-tag-label {
+    color: var(--text-color);
+    opacity: 0.7;
+    font-weight: 600;
+}
+
+.serial-tag-value {
+    color: var(--button-bg);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+/* Contact Picker Button in Phone Input */
+.btn-pick-contact-quick {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--table-header-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.btn-pick-contact-quick:hover {
+    background-color: var(--button-bg);
+    color: white;
+    border-color: var(--button-bg);
+}
+
+.btn-pick-contact-quick:active {
+    transform: scale(0.96);
+}
+
 .calculator-inputs {
     display: flex;
     gap: 10px;
