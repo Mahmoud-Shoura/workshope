@@ -133,7 +133,7 @@ export function Calculator() {
             setPhoneNumber(order.customer_phone || order.phoneNumber || '');
             setDeposit(String(order.deposit || ''));
             setOrderDate(order.date ? order.date.split('T')[0] : new Date().toISOString().split('T')[0]);
-            
+
             // Restore active buttons and adjustments!
             const restoredButtons = order.activeButtons?.length
                 ? order.activeButtons
@@ -725,10 +725,13 @@ export function Calculator() {
                         </div>
                     )}
                 </div>
-                <div className="calculator-inputs">
+
+                <div className="calculator-fields">
                     {/* Customer Name with Autocomplete */}
-                    <div className="autocomplete-wrapper" style={{ flex: 1, minWidth: 180, position: 'relative' }}>
+                    <div className="calc-field autocomplete-wrapper">
+                        <label className="calc-field-label" htmlFor="calc-customer-name">اسم العميل</label>
                         <input
+                            id="calc-customer-name"
                             ref={nameInputRef}
                             type="text"
                             placeholder="اسم العميل"
@@ -749,42 +752,55 @@ export function Calculator() {
                             </ul>
                         )}
                     </div>
+
                     {/* Customer Phone with Contact Picker */}
-                    <div className="phone-picker-wrapper" style={{ flex: 1.2, minWidth: 200, display: 'flex', gap: '6px' }}>
-                        <input
-                            type="tel"
-                            placeholder="رقم الهاتف (واتساب)"
-                            value={phoneNumber}
-                            onChange={e => setPhoneNumber(e.target.value)}
-                            dir="ltr"
-                            style={{ flex: 1 }}
-                        />
-                        <button
-                            type="button"
-                            onClick={handlePickContact}
-                            className="btn-pick-contact-quick"
-                            title="اختيار من جهات الاتصال المسجلة على الهاتف وجيميل"
-                        >
-                            <BookUser size={16} />
-                            <span>الأسماء</span>
-                        </button>
+                    <div className="calc-field">
+                        <label className="calc-field-label" htmlFor="calc-customer-phone">رقم الهاتف (واتساب)</label>
+                        <div className="phone-picker-wrapper">
+                            <input
+                                id="calc-customer-phone"
+                                type="tel"
+                                placeholder="01xxxxxxxxx"
+                                value={phoneNumber}
+                                onChange={e => setPhoneNumber(e.target.value)}
+                                dir="ltr"
+                            />
+                            <button
+                                type="button"
+                                onClick={handlePickContact}
+                                className="btn-pick-contact-quick"
+                                title="اختيار من جهات الاتصال المسجلة على الهاتف وجيميل"
+                            >
+                                <BookUser size={16} />
+                                <span>الأسماء</span>
+                            </button>
+                        </div>
                     </div>
-                    <input
-                        type="number"
-                        placeholder="العربون / المقدم المدفوع (ج.م)"
-                        value={deposit}
-                        onChange={e => setDeposit(e.target.value)}
-                        min="0"
-                        style={{ flex: 1, minWidth: 150 }}
-                    />
-                    <input
-                        type="date"
-                        value={orderDate}
-                        onChange={e => setOrderDate(e.target.value)}
-                        title="تاريخ المعاملة"
-                        style={{ flex: 1, minWidth: 150 }}
-                    />
+
+                    <div className="calc-field">
+                        <label className="calc-field-label" htmlFor="calc-deposit">العربون / المقدم (ج.م)</label>
+                        <input
+                            id="calc-deposit"
+                            type="number"
+                            placeholder="0"
+                            value={deposit}
+                            onChange={e => setDeposit(e.target.value)}
+                            min="0"
+                        />
+                    </div>
+
+                    <div className="calc-field">
+                        <label className="calc-field-label" htmlFor="calc-order-date">تاريخ المعاملة</label>
+                        <input
+                            id="calc-order-date"
+                            type="date"
+                            value={orderDate}
+                            onChange={e => setOrderDate(e.target.value)}
+                            title="تاريخ المعاملة"
+                        />
+                    </div>
                 </div>
+
                 <div className="calculator-buttons">
                     <button onClick={handleSave} className={`btn-save${editingOrderId ? ' btn-update' : ''}`} disabled={activeItems.length === 0}>
                         <Save size={16} />
