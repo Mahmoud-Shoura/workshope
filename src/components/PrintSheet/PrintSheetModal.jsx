@@ -55,9 +55,24 @@ export function PrintSheetModal({
     const handleSharePdf = async () => {
         if (!printContentRef.current) return;
         setIsSharingPdf(true);
+
+        // نسخة ثابتة العرض برا المودال عشان html2canvas
+        // (من غير overflow ولا max-height ولا media queries بتاعة الموبايل)
+        const clone = printContentRef.current.cloneNode(true);
+        clone.classList.add('ps-pdf-capture');
+
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText =
+            'position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;pointer-events:none;';
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
+
         try {
+            // استنى المتصفح يرسم النسخة قبل التصوير
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
             await shareInvoicePdf({
-                element: printContentRef.current,
+                element: clone,
                 customerName: customerName || 'عميل',
                 phoneNumber: phoneNumber || '',
                 serialNumber: serialNumber || '#INV-1001',
@@ -67,6 +82,7 @@ export function PrintSheetModal({
             console.error('Share PDF error:', err);
             alert('حدث خطأ أثناء مشاركة الفاتورة PDF: ' + err.message);
         } finally {
+            if (wrapper.parentNode) document.body.removeChild(wrapper);
             setIsSharingPdf(false);
         }
     };

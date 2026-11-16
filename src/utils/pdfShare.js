@@ -49,17 +49,29 @@ export async function shareInvoicePdf({
     const cleanSerial = (serialNumber || 'INV-1001').replace(/[#\s]/g, '');
     const fileName = `Invoice_${cleanSerial}.pdf`;
 
-    // Clone the element so we can apply print-safe styles without modifying the DOM
+    // ─────────────────────────────────────────────────────────────
+    // الإصلاح: النسخة لازم تتحط جوه الشاشة (top:0, left:0) مش على left:-9999px.
+    // html2canvas بيصوّر العنصر بالنسبة لإحداثياته في الصفحة، فلو كان برا الشاشة
+    // بيطلع الـ canvas أبيض والـ PDF فاضي (حوالي 3KB).
+    // بنخبّيه ورا كل حاجة بـ z-index سالب بدل ما نبعده برا الشاشة.
+    // ─────────────────────────────────────────────────────────────
     const clone = element.cloneNode(true);
 
-    // Apply forced print-safe styles to the clone
+    // شيل أي كلاسات بتأثر على التخطيط (flex / overflow من .ps-doc)
+    clone.removeAttribute('class');
     clone.style.cssText = `
-        width: 794px;
+        position: static;
+        display: block;
+        width: 100%;
+        max-width: none;
+        height: auto;
+        overflow: visible;
         padding: 24px 28px;
         background: #fff;
         color: #111;
         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
         font-size: 13px;
+        line-height: 1.5;
         direction: rtl;
         box-sizing: border-box;
     `;
@@ -78,11 +90,18 @@ export async function shareInvoicePdf({
     const itemsTable = clone.querySelector('.ps-items-table');
     if (itemsTable) itemsTable.style.display = 'table';
 
-    // Temporarily append to body (off-screen) for rendering
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
-    clone.style.top = '0';
-    document.body.appendChild(clone);
+    // حاوية ثابتة جوه الشاشة، مخفية ورا الصفحة
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText =
+        'position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;pointer-events:none;';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    // استنى الخطوط والرسم
+    if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch { /* ignore */ }
+    }
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     const opt = {
         margin: [8, 10, 8, 10],
@@ -91,10 +110,10 @@ export async function shareInvoicePdf({
         html2canvas: {
             scale: 2,
             useCORS: true,
-            letterRendering: true,
             logging: false,
-            width: 794,
-            windowWidth: 794
+            backgroundColor: '#ffffff',
+            scrollX: 0,
+            scrollY: 0
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
@@ -103,8 +122,10 @@ export async function shareInvoicePdf({
     try {
         pdfBlob = await html2pdf().set(opt).from(clone).outputPdf('blob');
     } finally {
-        document.body.removeChild(clone);
+        if (wrapper.parentNode) document.body.removeChild(wrapper);
     }
+
+    console.log('[pdfShare] pdf size (bytes):', pdfBlob.size);
 
     const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 

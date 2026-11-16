@@ -86,21 +86,34 @@
     transition: background 0.18s, transform 0.1s;
     white-space: nowrap;
 }
-.ps-btn:active { transform: scale(0.96); }
+
+.ps-btn:active {
+    transform: scale(0.96);
+}
 
 .ps-btn-wa {
     background: #25D366;
     color: #fff;
     box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3);
 }
-.ps-btn-wa:hover:not(:disabled) { background: #1db954; }
-.ps-btn-wa:disabled { opacity: 0.65; cursor: wait; }
+
+.ps-btn-wa:hover:not(:disabled) {
+    background: #1db954;
+}
+
+.ps-btn-wa:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
 
 .ps-btn-print {
     background: #1565c0;
     color: #fff;
 }
-.ps-btn-print:hover { background: #0d47a1; }
+
+.ps-btn-print:hover {
+    background: #0d47a1;
+}
 
 .ps-btn-close {
     display: flex;
@@ -114,10 +127,20 @@
     cursor: pointer;
     transition: background 0.15s;
 }
-.ps-btn-close:hover { background: rgba(0,0,0,0.08); }
 
-.spin-icon { animation: spin 0.9s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.ps-btn-close:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.spin-icon {
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* ══════════════════════════════════════
    Document body (the printable area)
@@ -141,17 +164,20 @@
     margin-bottom: 18px;
     border-bottom: 2.5px solid #222;
 }
+
 .ps-doc-title h2 {
     margin: 0 0 4px 0;
     font-size: 22px;
     font-weight: 800;
     color: #111;
 }
+
 .ps-doc-title .ps-subtitle {
     margin: 0;
     font-size: 12px;
     color: #666;
 }
+
 .ps-doc-title .ps-tax {
     margin: 2px 0 0 0;
     font-size: 12px;
@@ -173,8 +199,13 @@
     background: #fdfdfd;
 }
 
-.ps-box-customer { border-right: 4px solid #1565c0; }
-.ps-box-workshop { border-right: 4px solid #2e7d32; }
+.ps-box-customer {
+    border-right: 4px solid #1565c0;
+}
+
+.ps-box-workshop {
+    border-right: 4px solid #2e7d32;
+}
 
 .ps-box-head {
     display: flex;
@@ -202,24 +233,53 @@
     width: 100%;
     border-collapse: collapse;
 }
+
 .ps-info-table td {
     padding: 6px 12px;
     border-bottom: 1px dashed #eee;
     font-size: 12.5px;
     vertical-align: middle;
 }
-.ps-info-table tr:last-child td { border-bottom: none; }
+
+.ps-info-table tr:last-child td {
+    border-bottom: none;
+}
+
 .ps-info-label {
     color: #666;
     font-weight: 600;
     white-space: nowrap;
     width: 40%;
 }
-.ps-info-val { color: #111; }
-.ps-info-bold { font-weight: 700; color: #111; }
-.ps-info-phone { font-family: monospace; font-size: 12px; font-weight: 600; }
-.ps-info-serial { font-weight: 800; color: #1565c0; font-size: 13px; }
-.ps-info-empty { color: #aaa; font-style: italic; text-align: center; padding: 10px; font-size: 12px; }
+
+.ps-info-val {
+    color: #111;
+}
+
+.ps-info-bold {
+    font-weight: 700;
+    color: #111;
+}
+
+.ps-info-phone {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ps-info-serial {
+    font-weight: 800;
+    color: #1565c0;
+    font-size: 13px;
+}
+
+.ps-info-empty {
+    color: #aaa;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+    font-size: 12px;
+}
 
 /* ── Items table section ── */
 .ps-items-section {
@@ -267,21 +327,54 @@
 }
 
 .ps-items-table th:last-child,
-.ps-items-table td:last-child { border-left: none; }
+.ps-items-table td:last-child {
+    border-left: none;
+}
 
-.ps-row-even { background: #fff; }
-.ps-row-odd  { background: #f8fafc; }
+.ps-row-even {
+    background: #fff;
+}
+
+.ps-row-odd {
+    background: #f8fafc;
+}
 
 /* Column widths */
-.ps-col-num   { width: 36px; text-align: center; }
-.ps-col-type  { width: 22%; }
-.ps-col-dim   { width: 9%; text-align: center; }
-.ps-col-qty   { width: 7%; text-align: center; }
-.ps-col-area  { width: 28%; }
-.ps-col-price { width: 11%; text-align: left; }
+.ps-col-num {
+    width: 36px;
+    text-align: center;
+}
 
-.ps-item-name { font-weight: 700; }
-.ps-bold      { font-weight: 700; }
+.ps-col-type {
+    width: 22%;
+}
+
+.ps-col-dim {
+    width: 9%;
+    text-align: center;
+}
+
+.ps-col-qty {
+    width: 7%;
+    text-align: center;
+}
+
+.ps-col-area {
+    width: 28%;
+}
+
+.ps-col-price {
+    width: 11%;
+    text-align: left;
+}
+
+.ps-item-name {
+    font-weight: 700;
+}
+
+.ps-bold {
+    font-weight: 700;
+}
 
 /* ── Totals ── */
 .ps-totals {
@@ -311,10 +404,13 @@
     padding: 3px 0;
     border-bottom: 1px dashed #eee;
 }
-.ps-tot-row:last-child { border-bottom: none; }
+
+.ps-tot-row:last-child {
+    border-bottom: none;
+}
 
 .ps-adj-row {
-    background: rgba(0,0,0,0.02);
+    background: rgba(0, 0, 0, 0.02);
     border-radius: 3px;
     padding: 3px 6px;
 }
@@ -326,13 +422,35 @@
     font-size: 14px;
     font-weight: 800;
 }
-.ps-tot-deposit { font-size: 13px; }
-.ps-tot-remaining { font-size: 14px; font-weight: 800; }
 
-.ps-green   { color: #2e7d32; font-weight: 700; }
-.ps-red     { color: #c62828; font-weight: 800; }
-.ps-discount{ color: #c62828; font-weight: 700; }
-.ps-fee     { color: #1565c0; font-weight: 700; }
+.ps-tot-deposit {
+    font-size: 13px;
+}
+
+.ps-tot-remaining {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.ps-green {
+    color: #2e7d32;
+    font-weight: 700;
+}
+
+.ps-red {
+    color: #c62828;
+    font-weight: 800;
+}
+
+.ps-discount {
+    color: #c62828;
+    font-weight: 700;
+}
+
+.ps-fee {
+    color: #1565c0;
+    font-weight: 700;
+}
 
 /* ── Footer ── */
 .ps-footer {
@@ -342,14 +460,23 @@
     color: #666;
     font-size: 12px;
 }
-.ps-footer p { margin: 0; }
+
+.ps-footer p {
+    margin: 0;
+}
 
 /* ══════════════════════════════════════
    Mobile responsive (screen only)
    ══════════════════════════════════════ */
 @media (max-width: 680px) {
-    .ps-modal { max-height: 100vh; border-radius: 0; }
-    .ps-doc { padding: 14px; }
+    .ps-modal {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .ps-doc {
+        padding: 14px;
+    }
 
     .ps-info-grid {
         grid-template-columns: 1fr;
@@ -361,13 +488,29 @@
         gap: 10px;
     }
 
-    .ps-header { flex-direction: column; align-items: stretch; }
-    .ps-header-actions { width: 100%; }
-    .ps-btn-wa, .ps-btn-print { flex: 1; justify-content: center; }
+    .ps-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ps-header-actions {
+        width: 100%;
+    }
+
+    .ps-btn-wa,
+    .ps-btn-print {
+        flex: 1;
+        justify-content: center;
+    }
 
     /* On small screens show simplified card list instead of wide table */
-    .ps-items-table { display: none; }
-    .ps-mobile-cards { display: flex !important; }
+    .ps-items-table {
+        display: none;
+    }
+
+    .ps-mobile-cards {
+        display: flex !important;
+    }
 }
 
 /* Mobile card fallback (hidden by default) */
@@ -384,6 +527,7 @@
     border-radius: 6px;
     padding: 10px 12px;
 }
+
 .ps-mc-head {
     display: flex;
     justify-content: space-between;
@@ -393,6 +537,7 @@
     padding-bottom: 6px;
     margin-bottom: 7px;
 }
+
 .ps-mc-row {
     display: flex;
     justify-content: space-between;
@@ -401,11 +546,44 @@
 }
 
 /* ══════════════════════════════════════
+   PDF capture (clone rendered off-modal)
+   عرض ثابت + تخطيط الديسكتوب دايماً
+   عشان html2canvas يصوّر صح
+   ══════════════════════════════════════ */
+.ps-pdf-capture {
+    width: 794px !important;
+    max-width: none !important;
+    height: auto !important;
+    flex: none !important;
+    overflow: visible !important;
+    box-sizing: border-box;
+    padding: 24px 28px !important;
+    direction: rtl;
+}
+
+.ps-pdf-capture .ps-info-grid,
+.ps-pdf-capture .ps-totals {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+}
+
+.ps-pdf-capture .ps-items-table {
+    display: table !important;
+}
+
+.ps-pdf-capture .ps-mobile-cards {
+    display: none !important;
+}
+
+/* ══════════════════════════════════════
    Print / PDF media query
    ══════════════════════════════════════ */
 @media print {
+
     /* Only the modal content is visible */
-    body > *:not(.ps-overlay) { display: none !important; }
+    body>*:not(.ps-overlay) {
+        display: none !important;
+    }
 
     .ps-overlay {
         position: static !important;
@@ -440,11 +618,18 @@
     }
 
     /* Always show table in print */
-    .ps-items-table { display: table !important; }
-    .ps-mobile-cards { display: none !important; }
+    .ps-items-table {
+        display: table !important;
+    }
+
+    .ps-mobile-cards {
+        display: none !important;
+    }
 
     /* Hide UI chrome */
-    .no-print { display: none !important; }
+    .no-print {
+        display: none !important;
+    }
 
     @page {
         margin: 10mm 12mm;
