@@ -6,7 +6,7 @@ import './PrintSheetModal.css';
 const unitLabel = (unit) => {
     if (unit === 'm2') return 'م²';
     if (unit === 'piece') return 'قطعة';
-    return 'م.ط';
+    return 'متر طولي';
 };
 
 const extrasText = (item) => {
@@ -126,10 +126,10 @@ export function PrintSheetModal({
                     <div className="ps-doc-title">
                         <h2>{workshopName}</h2>
                         <div className="ps-meta-line">
-                            <span>: التاريخ {formattedDate}</span>
+                            <span><span className="ps-lbl">التاريخ</span> <bdi dir="ltr">{formattedDate}</bdi></span>
                             {printSettings?.phone && (
                                 <span className="ps-meta-phone">
-                                    تليفون :<bdi dir="ltr">{printSettings.phone}</bdi>
+                                    <span className="ps-lbl">تليفون</span> <bdi dir="ltr">{printSettings.phone}</bdi>
                                 </span>
                             )}
                         </div>
@@ -138,15 +138,15 @@ export function PrintSheetModal({
                     {/* سطر واحد: العميل + رقم الفاتورة + تليفون العميل */}
                     <div className="ps-customer-line">
                         <div className="ps-cl-item">
-                            <span>العميل:</span>
+                            <span className="ps-lbl">العميل</span>
                             <strong>{customerName || 'عميل نقدي'}</strong>
                         </div>
                         <div className="ps-cl-item">
-                            <span>فاتورة رقم:</span>
+                            <span className="ps-lbl">فاتورة رقم</span>
                             <strong>{serialNumber}</strong>
                         </div>
                         <div className="ps-cl-item">
-                            <span>تليفون العميل:</span>
+                            <span className="ps-lbl">تليفون العميل</span>
                             <strong><bdi dir="ltr">{phoneNumber || '—'}</bdi></strong>
                         </div>
                     </div>
@@ -158,12 +158,12 @@ export function PrintSheetModal({
                             <thead>
                                 <tr>
                                     <th className="ps-col-num">#</th>
-                                    <th className="ps-col-type">الصنف / الخامة</th>
-                                    <th className="ps-col-dim">الطول (سم)</th>
-                                    <th className="ps-col-dim">العرض (سم)</th>
+                                    <th className="ps-col-type">الصنف والخامة</th>
+                                    <th className="ps-col-dim">الطول<span className="ps-unit">سم</span></th>
+                                    <th className="ps-col-dim">العرض<span className="ps-unit">سم</span></th>
                                     <th className="ps-col-qty">العدد</th>
-                                    <th className="ps-col-area">المساحة / الوصف</th>
-                                    <th className="ps-col-price">السعر (ج.م)</th>
+                                    <th className="ps-col-area">المساحة والوصف</th>
+                                    <th className="ps-col-price">السعر<span className="ps-unit">جنيه</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -182,7 +182,7 @@ export function PrintSheetModal({
                                         areaDesc = `${Number(item.area || 0).toFixed(2)} ${unitLabel(item.unit)} + ${extrasText(item)}`;
                                     } else if (item.isAddLinear) {
                                         const linM = (((Number(item.length || 0) + Number(item.width || 0)) * 2 / 100) * Number(item.qty || 1)).toFixed(2);
-                                        areaDesc = `${Number(item.area || 0).toFixed(2)} م² + ${linM} م.ط`;
+                                        areaDesc = `${Number(item.area || 0).toFixed(2)} م² + ${linM} متر طولي`;
                                     } else {
                                         areaDesc = `${Number(item.area || 0).toFixed(2)} ${unitLabel(item.unit)}`;
                                     }
@@ -208,19 +208,19 @@ export function PrintSheetModal({
                         <div className="ps-totals-col">
                             {Number(totalArea || 0) > 0 && (
                                 <div className="ps-tot-row">
-                                    <span>إجمالي المساحة:</span>
+                                    <span className="ps-lbl">إجمالي المساحة</span>
                                     <strong>{Number(totalArea).toFixed(2)} م²</strong>
                                 </div>
                             )}
                             <div className="ps-tot-row">
-                                <span>الحساب الأساسي:</span>
-                                <strong>{Number(baseCost || 0).toFixed(2)} ج.م</strong>
+                                <span className="ps-lbl">الحساب الأساسي</span>
+                                <strong>{Number(baseCost || 0).toFixed(2)} جنيه</strong>
                             </div>
                             {adjustments && adjustments.length > 0 && adjustments.map((adj, idx) => (
                                 <div key={adj.id || idx} className="ps-tot-row ps-adj-row">
-                                    <span>{adj.name}:</span>
+                                    <span className="ps-lbl">{adj.name}</span>
                                     <strong className={adj.amount < 0 ? 'ps-discount' : 'ps-fee'}>
-                                        {adj.amount >= 0 ? '+' : ''}{Number(adj.amount || 0).toFixed(2)} ج.م
+                                        {adj.amount >= 0 ? '+' : ''}{Number(adj.amount || 0).toFixed(2)} جنيه
                                     </strong>
                                 </div>
                             ))}
@@ -228,16 +228,16 @@ export function PrintSheetModal({
 
                         <div className="ps-totals-summary">
                             <div className="ps-tot-row ps-tot-total">
-                                <span>الإجمالي المطلوب:</span>
-                                <strong>{safeTotalCost.toFixed(2)} ج.م</strong>
+                                <span className="ps-lbl">الإجمالي المطلوب</span>
+                                <strong>{safeTotalCost.toFixed(2)} جنيه</strong>
                             </div>
                             <div className="ps-tot-row ps-tot-deposit">
-                                <span>العربون / المقدم:</span>
-                                <strong className="ps-green">{safeDeposit.toFixed(2)} ج.م</strong>
+                                <span className="ps-lbl">العربون المقدم</span>
+                                <strong className="ps-green">{safeDeposit.toFixed(2)} جنيه</strong>
                             </div>
                             <div className="ps-tot-row ps-tot-remaining">
-                                <span>المتبقي للاستلام:</span>
-                                <strong className="ps-red">{safeRemaining.toFixed(2)} ج.م</strong>
+                                <span className="ps-lbl">المتبقي للاستلام</span>
+                                <strong className="ps-red">{safeRemaining.toFixed(2)} جنيه</strong>
                             </div>
                         </div>
                     </div>
@@ -246,7 +246,7 @@ export function PrintSheetModal({
                     <div className="ps-footer">
                         <p>{printSettings?.footer_note || `نشكركم لتعاملكم معنا — ${workshopName}`}</p>
                         {printSettings?.tax_number && (
-                            <p className="ps-tax">الرقم الضريبي: {printSettings.tax_number}</p>
+                            <p className="ps-tax"><span className="ps-lbl">الرقم الضريبي</span> <bdi dir="ltr">{printSettings.tax_number}</bdi></p>
                         )}
                     </div>
 
