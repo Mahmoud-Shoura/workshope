@@ -122,86 +122,33 @@ export function PrintSheetModal({
                 {/* ── Printable / PDF document ── */}
                 <div className="ps-doc" ref={printContentRef}>
 
-                    {/* Title row */}
+                    {/* اسم الورشة + التاريخ + تليفون الورشة */}
                     <div className="ps-doc-title">
                         <h2>{workshopName}</h2>
-                        {printSettings?.tax_number && (
-                            <p className="ps-tax">الرقم الضريبي: {printSettings.tax_number}</p>
-                        )}
-                        <p className="ps-subtitle">كشف تفصيلي بالقياسات وحسابات العميل</p>
+                        <div className="ps-meta-line">
+                            <span>: التاريخ {formattedDate}</span>
+                            {printSettings?.phone && (
+                                <span className="ps-meta-phone">
+                                    تليفون :<bdi dir="ltr">{printSettings.phone}</bdi>
+                                </span>
+                            )}
+                        </div>
                     </div>
 
-                    {/* ── 2-column info grid ── */}
-                    <div className="ps-info-grid">
-
-                        {/* Right: Customer info */}
-                        <div className="ps-info-box ps-box-customer">
-                            <div className="ps-box-head">
-                                <span>بيانات العميل والفاتورة</span>
-                                <span className="ps-pill-serial">{serialNumber}</span>
-                            </div>
-                            <table className="ps-info-table">
-                                <tbody>
-                                    <tr>
-                                        <td className="ps-info-label">اسم العميل</td>
-                                        <td className="ps-info-val ps-info-bold">{customerName || 'عميل نقدي'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="ps-info-label">رقم الهاتف</td>
-                                        <td className="ps-info-val ps-info-phone" dir="ltr">{phoneNumber || '—'}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="ps-info-label">رقم الفاتورة</td>
-                                        <td className="ps-info-val ps-info-serial">{serialNumber}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="ps-info-label">تاريخ الفاتورة</td>
-                                        <td className="ps-info-val">{formattedDate}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    {/* سطر واحد: العميل + رقم الفاتورة + تليفون العميل */}
+                    <div className="ps-customer-line">
+                        <div className="ps-cl-item">
+                            <span>العميل:</span>
+                            <strong>{customerName || 'عميل نقدي'}</strong>
                         </div>
-
-                        {/* Left: Workshop info */}
-                        <div className="ps-info-box ps-box-workshop">
-                            <div className="ps-box-head">
-                                <span>بيانات الورشة</span>
-                            </div>
-                            <table className="ps-info-table">
-                                <tbody>
-                                    <tr>
-                                        <td className="ps-info-label">اسم الورشة</td>
-                                        <td className="ps-info-val ps-info-bold">{workshopName}</td>
-                                    </tr>
-                                    {printSettings?.owner_name && (
-                                        <tr>
-                                            <td className="ps-info-label">صاحب العمل</td>
-                                            <td className="ps-info-val">{printSettings.owner_name}</td>
-                                        </tr>
-                                    )}
-                                    {printSettings?.phone && (
-                                        <tr>
-                                            <td className="ps-info-label">هاتف الورشة</td>
-                                            <td className="ps-info-val ps-info-phone" dir="ltr">{printSettings.phone}</td>
-                                        </tr>
-                                    )}
-                                    {printSettings?.address && (
-                                        <tr>
-                                            <td className="ps-info-label">العنوان</td>
-                                            <td className="ps-info-val">{printSettings.address}</td>
-                                        </tr>
-                                    )}
-                                    {!printSettings?.owner_name && !printSettings?.phone && !printSettings?.address && (
-                                        <tr>
-                                            <td colSpan={2} className="ps-info-empty">
-                                                (أضف بيانات الورشة من الإعدادات)
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                        <div className="ps-cl-item">
+                            <span>فاتورة رقم:</span>
+                            <strong>{serialNumber}</strong>
                         </div>
-
+                        <div className="ps-cl-item">
+                            <span>تليفون العميل:</span>
+                            <strong><bdi dir="ltr">{phoneNumber || '—'}</bdi></strong>
+                        </div>
                     </div>
 
                     {/* ── Items table ── */}
@@ -295,9 +242,12 @@ export function PrintSheetModal({
                         </div>
                     </div>
 
-                    {/* Footer */}
+                    {/* Footer + الرقم الضريبي في آخر الفاتورة */}
                     <div className="ps-footer">
                         <p>{printSettings?.footer_note || `نشكركم لتعاملكم معنا — ${workshopName}`}</p>
+                        {printSettings?.tax_number && (
+                            <p className="ps-tax">الرقم الضريبي: {printSettings.tax_number}</p>
+                        )}
                     </div>
 
                 </div>
