@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './SubscriptionBlock.css';
 
+// رقم استلام الدفع (محفظة فودافون كاش + انستا باي)
+const PAYMENT_NUMBER = '01121779947';
+
 export function SubscriptionBlock() {
     const { orders, subscription, submitPayment, logoutUser } = useGlassStore();
     const [selectedPlan, setSelectedPlan] = useState(null); // 'weekly' | 'monthly' | 'yearly'
@@ -31,7 +34,7 @@ export function SubscriptionBlock() {
 
         setLoading(true);
         setError('');
-        
+
         const planDetails = PLANS[selectedPlan];
         const res = await submitPayment(
             subscription.id,
@@ -143,13 +146,13 @@ export function SubscriptionBlock() {
                                 <h4>معلومات التحويل:</h4>
                                 {paymentMethod === 'instapay' ? (
                                     <div className="instructions-box">
-                                        <p>يرجى تحويل مبلغ <strong>{PLANS[selectedPlan].price} جنيه</strong> إلى عنوان انستا باي التالي:</p>
-                                        <p className="payment-ref"><strong>workshop@instapay</strong></p>
+                                        <p>يرجى تحويل مبلغ <strong>{PLANS[selectedPlan].price} جنيه</strong> عبر انستا باي إلى رقم الهاتف التالي:</p>
+                                        <p className="payment-ref" dir="ltr"><strong>{PAYMENT_NUMBER}</strong></p>
                                     </div>
                                 ) : (
                                     <div className="instructions-box">
                                         <p>يرجى تحويل مبلغ <strong>{PLANS[selectedPlan].price} جنيه</strong> إلى رقم فودافون كاش التالي:</p>
-                                        <p className="payment-ref"><strong>01012345678</strong></p>
+                                        <p className="payment-ref" dir="ltr"><strong>{PAYMENT_NUMBER}</strong></p>
                                     </div>
                                 )}
 
@@ -167,7 +170,7 @@ export function SubscriptionBlock() {
                                 {error && <p className="error-text">⚠️ {error}</p>}
 
                                 <button type="submit" className="submit-pay-btn" disabled={loading}>
-                                    {loading ? 'جاري إرسال الطلب...' : 'تأكيد إرسال التحويل الدفع'}
+                                    {loading ? 'جاري إرسال الطلب...' : 'تأكيد إرسال التحويل'}
                                 </button>
                             </div>
                         )}
