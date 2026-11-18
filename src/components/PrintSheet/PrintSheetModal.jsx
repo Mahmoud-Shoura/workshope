@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Printer, MessageCircle, X, Loader2 } from 'lucide-react';
 import { shareInvoicePdf } from '../../utils/pdfShare';
 import './PrintSheetModal.css';
@@ -14,6 +14,23 @@ const extrasText = (item) => {
         return item.extras.map(e => `${Number(e.measure).toFixed(2)} ${e.name || e.unit}`).join(' + ');
     }
     return '';
+};
+
+// مساحة البند بالمتر المربع (القطعة والمتر الطولي مالهمش مساحة)
+const m2AreaOf = (item) => {
+    if (item.isPiece || item.unit === 'piece') return 0;
+    const isPureLinear = item.unit && item.unit !== 'm2' && !item.isAddLinear && !(item.extras && item.extras.length);
+    return isPureLinear ? 0 : Number(item.area || 0);
+};
+
+// سعر الوحدة: الحقل الجاهز لو موجود، وإلا بيتحسب (قطعة = الإجمالي ÷ العدد، متر = الإجمالي ÷ المساحة)
+const unitPriceOf = (item) => {
+    const direct = item.unitPrice ?? item.price ?? item.pricePerUnit;
+    if (direct !== undefined && direct !== null && direct !== '') return Number(direct);
+    if ((item.isPiece || item.unit === 'piece') && Number(item.qty) > 0) return Number(item.cost || 0) / Number(item.qty);
+    const area = m2AreaOf(item);
+    if (area > 0 && !(item.extras && item.extras.length) && !item.isAddLinear) return Number(item.cost || 0) / area;
+    return null;
 };
 
 export function PrintSheetModal({
@@ -35,6 +52,14 @@ export function PrintSheetModal({
     const printContentRef = useRef(null);
     const [isSharingPdf, setIsSharingPdf] = useState(false);
 
+    // الخروج بزرار Esc
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const safeTotalCost = Number(totalCost || 0);
@@ -42,6 +67,21 @@ export function PrintSheetModal({
     const safeRemaining = remainingBalance !== undefined
         ? Number(remainingBalance)
         : Math.max(0, safeTotalCost - safeDeposit);
+
+    // إجماليات الجدول
+    const sumQty = items.reduce((t, i) => t + Number(i.qty || 0), 0);
+    const sumArea = items.reduce((t, i) => t + m2AreaOf(i), 0);
+    const sumCost = items.reduce((t, i) => t + Number(i.cost || 0), 0);
+
+    // تجميع الأصناف المتشابهة (نفس اسم الصنف/الخامة)
+    const groups = Object.values(items.reduce((acc, i) => {
+        const key = i.typeName || '—';
+        if (!acc[key]) acc[key] = { name: key, qty: 0, area: 0, cost: 0 };
+        acc[key].qty += Number(i.qty || 0);
+        acc[key].area += m2AreaOf(i);
+        acc[key].cost += Number(i.cost || 0);
+        return acc;
+    }, {}));
 
     const workshopName = printSettings?.workshop_name || 'ورشة العمل الحديثة';
     const formattedDate = orderDate
@@ -113,8 +153,8 @@ export function PrintSheetModal({
                         <button type="button" onClick={handlePrint} className="ps-btn ps-btn-print" title="طباعة">
                             <Printer size={15} /><span>طباعة</span>
                         </button>
-                        <button type="button" onClick={onClose} className="ps-btn-close" title="إغلاق">
-                            <X size={18} />
+                        <button type="button" onClick={onClose} className="ps-btn-close" title="إغلاق" aria-label="إغلاق">
+                            <X size={18} strokeWidth={2.5} />
                         </button>
                     </div>
                 </div>
@@ -162,14 +202,15 @@ export function PrintSheetModal({
                                     <th className="ps-col-dim">الطول<span className="ps-unit">سم</span></th>
                                     <th className="ps-col-dim">العرض<span className="ps-unit">سم</span></th>
                                     <th className="ps-col-qty">العدد</th>
-                                    <th className="ps-col-area">المساحة والوصف</th>
-                                    <th className="ps-col-price">السعر<span className="ps-unit">جنيه</span></th>
+                                    <th className="ps-col-area">التكعيب </th>
+                                    <th className="ps-col-uprice">سعر الوحدة<span className="ps-unit">جنيه</span></th>
+                                    <th className="ps-col-price">الإجمالي<span className="ps-unit">جنيه</span></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {items.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} style={{ textAlign: 'center', color: '#888', padding: '14px' }}>
+                                        <td colSpan={8} style={{ textAlign: 'center', color: '#888', padding: '14px' }}>
                                             لا توجد بنود مدخلة
                                         </td>
                                     </tr>
@@ -195,13 +236,52 @@ export function PrintSheetModal({
                                             <td className="ps-col-dim">{item.isPiece ? '—' : (item.width || '—')}</td>
                                             <td className="ps-col-qty ps-bold">{item.qty}</td>
                                             <td className="ps-col-area">{areaDesc}</td>
+                                            <td className="ps-col-uprice">{unitPriceOf(item) !== null ? unitPriceOf(item).toFixed(2) : '—'}</td>
                                             <td className="ps-col-price ps-bold">{Number(item.cost || 0).toFixed(2)}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
+                            {items.length > 0 && (
+                                <tfoot>
+                                    <tr className="ps-foot-row">
+                                        <td colSpan={4} className="ps-foot-label">الإجمالي</td>
+                                        <td className="ps-col-qty">{sumQty}</td>
+                                        <td className="ps-col-area">{sumArea > 0 ? `${sumArea.toFixed(2)} م²` : '—'}</td>
+                                        <td className="ps-col-uprice">—</td>
+                                        <td className="ps-col-price">{sumCost.toFixed(2)}</td>
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
+
+                    {/* ── إجمالي الأصناف المتشابهة ── */}
+                    {items.length > 0 && (
+                        <div className="ps-items-section ps-group-section">
+                            <div className="ps-section-label">إجمالي الأصناف المتشابهة</div>
+                            <table className="ps-items-table ps-group-table">
+                                <thead>
+                                    <tr>
+                                        <th className="ps-col-type">الصنف والخامة</th>
+                                        <th className="ps-col-qty">العدد</th>
+                                        <th className="ps-col-area">إجمالي المساحة</th>
+                                        <th className="ps-col-price">الإجمالي<span className="ps-unit">جنيه</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {groups.map((g, idx) => (
+                                        <tr key={g.name} className={idx % 2 === 0 ? 'ps-row-even' : 'ps-row-odd'}>
+                                            <td className="ps-col-type ps-item-name">{g.name}</td>
+                                            <td className="ps-col-qty ps-bold">{g.qty}</td>
+                                            <td className="ps-col-area">{g.area > 0 ? `${g.area.toFixed(2)} م²` : '—'}</td>
+                                            <td className="ps-col-price ps-bold">{g.cost.toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
                     {/* ── Totals ── */}
                     <div className="ps-totals">

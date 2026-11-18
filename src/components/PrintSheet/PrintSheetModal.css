@@ -237,6 +237,10 @@
     width: 80px;
 }
 
+.ps-col-uprice {
+    width: 90px;
+}
+
 .ps-col-price {
     width: 100px;
 }
@@ -470,4 +474,69 @@
     font-size: 11px;
     font-weight: 400;
     opacity: 0.85;
+}
+
+
+/* ═══════════════ صف الإجمالي + جدول الأصناف المتشابهة ═══════════════ */
+.ps-items-table tfoot td {
+    background: #e9edf2;
+    font-weight: 800;
+    border-top: 2px solid #1f2937;
+}
+
+.ps-foot-label {
+    text-align: right !important;
+}
+
+.ps-group-section {
+    margin-top: 14px;
+}
+
+.ps-group-table .ps-col-area {
+    width: auto;
+}
+
+.ps-items-table tr {
+    page-break-inside: avoid;
+}
+
+@media print {
+    .ps-items-table tfoot td {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+
+/* ═══════════════ زرار الإغلاق (X) ═══════════════ */
+.ps-btn-close {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    background: #e3e6ea !important;
+    color: #222 !important;
+    border: 1px solid #cfd4da !important;
+    border-radius: 8px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.ps-btn-close svg {
+    width: 18px !important;
+    height: 18px !important;
+    display: block;
+    flex: none;
+    opacity: 1 !important;
+    stroke: currentColor !important;
+}
+
+.ps-btn-close:hover {
+    background: #c62828 !important;
+    border-color: #c62828 !important;
+    color: #fff !important;
 }
