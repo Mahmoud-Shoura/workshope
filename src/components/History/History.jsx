@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2, CheckCircle, Printer } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
+import { hueForSerial } from '../../utils/tint';
+import '../../utils/tint.css';
 import './History.css';
 
 // Key used to pass order data to Calculator for editing (avoids race condition with CustomEvent)
@@ -272,7 +274,7 @@ export function History({ onViewChange }) {
                                 const baseCost = order.baseCost || order.base_cost;
                                 const serial = order.serialNumber || order.serial_number;
                                 return (
-                                    <tr key={order.id}>
+                                    <tr key={order.id} className="tinted" style={{ '--tint-h': hueForSerial(serial, order.id) }}>
                                         <td className="history-date">
                                             {serial && <div className="history-serial-pill">{serial}</div>}
                                             <div>{new Date(order.date).toLocaleDateString('ar-EG')}</div>
@@ -382,7 +384,7 @@ export function History({ onViewChange }) {
                         const phone = order.customer_phone || order.phoneNumber;
                         const serial = order.serialNumber || order.serial_number;
                         return (
-                            <div key={order.id} className="history-card">
+                            <div key={order.id} className="history-card tinted" style={{ '--tint-h': hueForSerial(serial, order.id) }}>
                                 <div className="history-card-header">
                                     <div>
                                         {serial && <span className="history-card-serial-badge">{serial}</span>}

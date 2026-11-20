@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash, Save, Printer, MessageCircle, FilePlus, Edit2, BookUser } from 'lucide-react';
 import { useGlassStore, generateSerialNumber } from '../../hooks/useGlassStore';
 import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
+import { hueAt, hueForSerial, nextColorIdx } from '../../utils/tint';
+import '../../utils/tint.css';
 import './Calculator.css';
 
 const DRAFT_KEY = 'calculator_draft';
@@ -51,7 +53,8 @@ function loadDraft() {
 export function Calculator() {
     const { glassTypes, customButtons, saveOrder, updateOrder, printSettings, orders } = useGlassStore();
 
-    const makeGroup = (id = Date.now()) => ({
+    const makeGroup = (id = Date.now(), colorIdx = 0) => ({
+        colorIdx,
         id,
         typeId: glassTypes[0]?.id || '',
         inputText: '',
@@ -127,7 +130,7 @@ export function Calculator() {
                         : line;
                 }
             });
-            const rebuiltGroups = Object.values(groupMap);
+            const rebuiltGroups = Object.values(groupMap).map((g, i) => ({ ...g, colorIdx: i }));
             setGroups(rebuiltGroups.length ? rebuiltGroups : getDefaultGroup());
             setCustomerName(order.customer_name || order.customerName || '');
             setPhoneNumber(order.customer_phone || order.phoneNumber || '');
@@ -229,7 +232,7 @@ export function Calculator() {
     });
 
     const addGroup = () => {
-        setGroups([...groups, makeGroup()]);
+        setGroups([...groups, makeGroup(Date.now(), nextColorIdx(groups))]);
     };
 
     const updateGroup = (id, field, value) => {
@@ -714,7 +717,11 @@ export function Calculator() {
             {/* Header */}
             <div className="calculator-header no-print">
                 <div className="calculator-header-top-row">
-                    <div className="invoice-serial-tag" title="رقم الفاتورة الحالي">
+                    <div
+                        className="invoice-serial-tag tinted"
+                        style={{ '--tint-h': hueForSerial(invoiceSerial) }}
+                        title="رقم الفاتورة الحالي"
+                    >
                         <span className="serial-tag-label">رقم الفاتورة:</span>
                         <strong className="serial-tag-value">{invoiceSerial || '#INV-1001'}</strong>
                     </div>
@@ -843,7 +850,7 @@ export function Calculator() {
                     }, { area: 0, cost: 0, totalQty: 0 });
 
                     return (
-                        <div key={group.id} className="calculator-group-card">
+                        <div key={group.id} className="calculator-group-card tinted" style={{ '--tint-h': hueAt(group.colorIdx ?? groupIdx) }}>
                             <div className="calculator-group-header">
                                 <div className="group-title-select">
                                     <span className="group-number">المجموعة #{groupIdx + 1}</span>
@@ -1048,7 +1055,7 @@ export function Calculator() {
                                                 <label className="group-input-label">أدخل المقاسات:</label>
                                             </div>
 
-                                            {/* ── إضافة وحدة حساب فوق الوحدة الأساسية ── */}
+                                            {/* ── إضافة وحدة حساب فوق الوحدة الأساسية (مخفية مؤقتاً) ──
                                             <div
                                                 className="extras-box"
                                                 style={{
@@ -1107,6 +1114,7 @@ export function Calculator() {
                                                     </div>
                                                 )}
                                             </div>
+                                            */}
 
                                             <textarea
                                                 value={group.inputText}

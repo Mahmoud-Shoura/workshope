@@ -1,13 +1,15 @@
 import React from 'react';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
+import { hueAt } from '../../utils/tint';
+import '../../utils/tint.css';
 import './GlassTypeManager.css';
 
 export function GlassTypeManager() {
-    const { 
-        glassTypes, 
-        addGlassType, 
-        updateGlassType, 
+    const {
+        glassTypes,
+        addGlassType,
+        updateGlassType,
         deleteGlassType,
         customButtons,
         addCustomButton,
@@ -134,9 +136,9 @@ export function GlassTypeManager() {
             <div className="inventory-header">
                 <h2>إدارة المخزن والإعدادات</h2>
                 <button
-                    onClick={() => { 
-                        setIsAdding(true); 
-                        setEditingId(null); 
+                    onClick={() => {
+                        setIsAdding(true);
+                        setEditingId(null);
                         setFormData({ name: '', price: '', unit: 'm2' });
                         setButtonFormData({ name: '', type: 'discount_percent', value: '' });
                     }}
@@ -275,8 +277,8 @@ export function GlassTypeManager() {
             {/* Glass Types Grid */}
             {activeTab === 'types' && (
                 <div className="inventory-grid">
-                    {glassTypes.map((type) => (
-                        <div key={type.id} className="inventory-card">
+                    {glassTypes.map((type, idx) => (
+                        <div key={type.id} className="inventory-card tinted" style={{ '--tint-h': hueAt(idx) }}>
                             <div className="inventory-card-content">
                                 <h3>{type.name}</h3>
                                 <p>
@@ -310,8 +312,8 @@ export function GlassTypeManager() {
             {/* Custom Buttons Grid */}
             {activeTab === 'buttons' && (
                 <div className="inventory-grid">
-                    {customButtons && customButtons.map((btn) => (
-                        <div key={btn.id} className="inventory-card custom-btn-card">
+                    {customButtons && customButtons.map((btn, idx) => (
+                        <div key={btn.id} className="inventory-card custom-btn-card tinted" style={{ '--tint-h': hueAt(idx) }}>
                             <div className="inventory-card-content">
                                 <h3>{btn.name}</h3>
                                 <div className="btn-type-tag" data-type={btn.type}>

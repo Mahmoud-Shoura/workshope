@@ -1,0 +1,92 @@
+/* ═════════ متغيرات الألوان الخفيفة (فاتح / غامق) ═════════ */
+.tinted {
+    --tint-bg: hsl(var(--tint-h) 70% 97%);
+    --tint-header: hsl(var(--tint-h) 62% 93%);
+    --tint-accent: hsl(var(--tint-h) 55% 58%);
+    --tint-pill-bg: hsl(var(--tint-h) 65% 90%);
+    --tint-pill-fg: hsl(var(--tint-h) 55% 28%);
+}
+
+.dark .tinted,
+[data-theme='dark'] .tinted {
+    --tint-bg: hsl(var(--tint-h) 22% 16%);
+    --tint-header: hsl(var(--tint-h) 26% 21%);
+    --tint-accent: hsl(var(--tint-h) 48% 55%);
+    --tint-pill-bg: hsl(var(--tint-h) 30% 26%);
+    --tint-pill-fg: hsl(var(--tint-h) 70% 82%);
+}
+
+/* ═════════ الحاسبة: كارت المجموعة ═════════ */
+.calculator-group-card.tinted {
+    background-color: var(--tint-bg);
+    border-inline-start: 5px solid var(--tint-accent);
+}
+
+.calculator-group-card.tinted .calculator-group-header,
+.calculator-group-card.tinted .calculator-group-footer {
+    background-color: var(--tint-header);
+}
+
+.calculator-group-card.tinted .group-number {
+    background-color: var(--tint-pill-bg);
+    color: var(--tint-pill-fg);
+    padding: 2px 12px;
+    border-radius: 12px;
+}
+
+/* رقم الفاتورة في هيدر الحاسبة بنفس لون الفاتورة في السجل */
+.invoice-serial-tag.tinted {
+    background-color: var(--tint-pill-bg);
+    border-color: var(--tint-accent);
+}
+
+.invoice-serial-tag.tinted .serial-tag-label,
+.invoice-serial-tag.tinted .serial-tag-value {
+    color: var(--tint-pill-fg);
+    opacity: 1;
+}
+
+/* ═════════ السجل: صف الفاتورة (ديسكتوب) ═════════ */
+.history-table tr.tinted td {
+    background-color: var(--tint-bg);
+}
+
+.history-table tr.tinted td:first-child {
+    border-inline-start: 5px solid var(--tint-accent);
+}
+
+.history-table tr.tinted:hover td {
+    background-color: var(--tint-header);
+}
+
+/* ═════════ السجل: كارت الفاتورة (موبايل) ═════════ */
+.history-card.tinted {
+    background-color: var(--tint-bg);
+    border-inline-start: 5px solid var(--tint-accent);
+}
+
+.history-card.tinted .history-card-item:not(.adj-row) {
+    background-color: var(--tint-header);
+}
+
+/* بادج رقم الفاتورة بلون الفاتورة */
+.tinted .history-serial-pill,
+.tinted .history-card-serial-badge {
+    background-color: var(--tint-pill-bg);
+    color: var(--tint-pill-fg);
+    border-color: var(--tint-accent);
+}
+
+/* ═════════ المخزن: كروت الأصناف والأزرار المخصصة ═════════ */
+.inventory-card.tinted {
+    background-color: var(--tint-bg);
+    border-inline-start: 5px solid var(--tint-accent);
+}
+
+.inventory-card.tinted:hover {
+    background-color: var(--tint-header);
+}
+
+.inventory-card.tinted .inventory-card-content h3 {
+    color: var(--tint-pill-fg);
+}
