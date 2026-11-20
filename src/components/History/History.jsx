@@ -399,7 +399,7 @@ export function History({ onViewChange }) {
                                                 <div className="deposit-val text-green">المقدم: {dep.toLocaleString()} ج.م</div>
                                                 {getPayments(order).map((pay, i) => (
                                                     <div key={pay.id || i} className="payment-date-row text-green">
-                                                        دفعة {formatDate(pay.date)}: {Number(pay.amount).toLocaleString()} ج.م
+                                                        <span className="lbl-colon">دفعة <span className="num-unit">{formatDate(pay.date)}</span></span> {Number(pay.amount).toLocaleString()} ج.م
                                                     </div>
                                                 ))}
                                                 <div className="remaining-val text-red">الباقي: {rem.toLocaleString()} ج.م</div>
@@ -475,7 +475,9 @@ export function History({ onViewChange }) {
                                     <div>
                                         {serial && <span className="history-card-serial-badge">{serial}</span>}
                                         <p className="history-card-date">
-                                            {new Date(order.date).toLocaleDateString('ar-EG')} - {new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                            <span className="hc-date">{new Date(order.date).toLocaleDateString('ar-EG')}</span>
+                                            <span className="hc-sep">•</span>
+                                            <span className="hc-time">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
                                         </p>
                                     </div>
                                     <div className="history-card-header-actions">
@@ -562,7 +564,7 @@ export function History({ onViewChange }) {
                                         </div>
                                         {getPayments(order).map((pay, i) => (
                                             <div key={pay.id || i} className="payment-row text-green">
-                                                <span>دفعة {formatDate(pay.date)}:</span>
+                                                <span className="lbl-colon">دفعة <span className="num-unit">{formatDate(pay.date)}</span></span>
                                                 <strong>{Number(pay.amount).toLocaleString()} ج.م</strong>
                                             </div>
                                         ))}

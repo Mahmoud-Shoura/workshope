@@ -323,3 +323,89 @@
     font-weight: 700;
     white-space: nowrap;
 }
+
+/* ═════════ كارت الفاتورة على الشاشات الصغيرة (سجل العملاء) ═════════ */
+.history-card-serial-badge {
+    white-space: nowrap;
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+.history-card-date {
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.hc-date,
+.hc-time,
+.num-unit {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.hc-sep {
+    margin: 0 6px;
+    opacity: 0.5;
+}
+
+/* النقطتين بعد العنوان في آخره (يسار الكلمة في العربي) */
+.lbl-colon::after {
+    content: ':';
+}
+
+@media (max-width: 768px) {
+    .history-mobile-cards .history-card-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "info price"
+            "actions actions";
+        gap: 12px;
+        align-items: center;
+    }
+
+    .history-mobile-cards .history-card-header>div:first-child {
+        grid-area: info;
+        min-width: 0;
+    }
+
+    /* نخلي السعر والأزرار عناصر مباشرة في الـ grid */
+    .history-mobile-cards .history-card-header-actions {
+        display: contents;
+    }
+
+    .history-mobile-cards .history-card-price {
+        grid-area: price;
+        font-size: 18px;
+        white-space: nowrap;
+    }
+
+    .history-mobile-cards .history-card-header .actions-flex {
+        grid-area: actions;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .history-mobile-cards .history-card-header .actions-flex>button {
+        flex: 1 1 44px;
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 0;
+    }
+
+    /* "تم الاستلام" في سطر لوحده فوق الأزرار */
+    .history-mobile-cards .history-card-header .actions-flex>.paid-badge {
+        flex: 1 1 100%;
+        order: -1;
+        justify-content: center;
+        padding: 8px;
+    }
+
+    .history-mobile-cards .payment-row {
+        gap: 10px;
+    }
+}
