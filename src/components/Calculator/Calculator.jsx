@@ -818,22 +818,14 @@ export function Calculator() {
         <div className="calculator-container">
             {/* Header */}
             <div className="calculator-header no-print">
-                <div className="calculator-header-top-row">
-                    <div
-                        className="invoice-serial-tag tinted"
-                        style={{ '--tint-h': hueForSerial(invoiceSerial) }}
-                        title="رقم الفاتورة الحالي"
-                    >
-                        <span className="serial-tag-label">رقم الفاتورة:</span>
-                        <strong className="serial-tag-value">{invoiceSerial || '#INV-1001'}</strong>
-                    </div>
-                    {editingOrderId && (
+                {editingOrderId && (
+                    <div className="calculator-header-top-row">
                         <div className="edit-mode-banner">
                             <Edit2 size={16} />
                             <span>وضع التعديل — أنت تعدّل على فاتورة محفوظة</span>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 <div className="calculator-fields">
                     {/* Customer Name with Autocomplete */}
@@ -982,6 +974,18 @@ export function Calculator() {
                             <span>المتبقي من الحساب</span>
                             <strong>{remainingAmount.toFixed(2)} ج.م</strong>
                         </div>
+                    </div>
+                </div>
+
+                {/* رقم الفاتورة (تحت، فوق أزرار الحفظ) */}
+                <div className="calculator-header-top-row">
+                    <div
+                        className="invoice-serial-tag tinted"
+                        style={{ '--tint-h': hueForSerial(invoiceSerial) }}
+                        title="رقم الفاتورة الحالي"
+                    >
+                        <span className="serial-tag-label">رقم الفاتورة:</span>
+                        <strong className="serial-tag-value">{invoiceSerial || '#INV-1001'}</strong>
                     </div>
                 </div>
 
