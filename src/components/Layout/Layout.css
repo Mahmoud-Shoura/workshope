@@ -124,6 +124,12 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    .layout-mobile-header {
+        display: flex;
+        position: fixed;
+        width: 100%;
+    }
+
     .layout-sidebar {
         transform: translateX(100%);
         visibility: hidden;
@@ -184,8 +190,23 @@
 }
 
 @keyframes fadeInOut {
-    0% { opacity: 0; bottom: 10px; }
-    15% { opacity: 1; bottom: 30px; }
-    85% { opacity: 1; bottom: 30px; }
-    100% { opacity: 0; bottom: 50px; }
+    0% {
+        opacity: 0;
+        bottom: 10px;
+    }
+
+    15% {
+        opacity: 1;
+        bottom: 30px;
+    }
+
+    85% {
+        opacity: 1;
+        bottom: 30px;
+    }
+
+    100% {
+        opacity: 0;
+        bottom: 50px;
+    }
 }
