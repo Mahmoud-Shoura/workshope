@@ -7,6 +7,23 @@ import '../../utils/tint.css';
 import './Calculator.css';
 
 const DRAFT_KEY = 'calculator_draft';
+const PREV_BALANCE_ID = 'previous_balance';      // الحساب القديم بيتحفظ كبند ضمن الرسوم
+const INVOICE_PAYMENT_KIND = 'invoice_payment';  // الدفعات اللي بتتسجل مع الفاتورة (كل دفعة بتاريخها)
+
+// ───────── تواريخ الدفعات ─────────
+const toLocalDateStr = (d) => {
+    const dt = d instanceof Date ? d : new Date(d);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+};
+const todayStr = () => toLocalDateStr(new Date());
+const noonIso = (dateStr) => new Date(`${dateStr}T12:00:00`).toISOString();
+// لو التاريخ ماتغيرش بنحافظ على وقت الدفعة الأصلي، وإلا بنخزنه الساعة 12 الضهر
+const paymentIso = (p) => (p.iso && toLocalDateStr(p.iso) === p.date ? p.iso : noonIso(p.date));
+const formatPaymentDate = (d) => {
+    if (!d) return '';
+    const dt = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T12:00:00`) : new Date(d);
+    return dt.toLocaleDateString('ar-EG');
+};
 const EDIT_ORDER_KEY = 'edit_order_pending';  // written by History, read here on mount
 
 // وحدات الحساب اللي يقدر البرنامج يعملها (تقدر تضيف أي وحدة منهم فوق وحدة الصنف الأساسية)
@@ -76,12 +93,23 @@ export function Calculator() {
     const [activeButtons, setActiveButtons] = useState(() => loadDraft()?.activeButtons || []);
     const [editingOrderId, setEditingOrderId] = useState(() => loadDraft()?.editingOrderId || null);
     const [invoiceSerial, setInvoiceSerial] = useState(() => loadDraft()?.invoiceSerial || '');
+    const [previousBalance, setPreviousBalance] = useState(() => loadDraft()?.previousBalance || '');
+    const [payments, setPayments] = useState(() => {
+        const d = loadDraft();
+        if (Array.isArray(d?.payments)) return d.payments;
+        // مسودة قديمة كان فيها خانة دفعة واحدة
+        if (Number(d?.paidAmount) > 0) {
+            return [{ id: `inv-${Date.now()}`, amount: String(d.paidAmount), date: todayStr(), iso: new Date().toISOString() }];
+        }
+        return [];
+    });
+    const [otherPayments, setOtherPayments] = useState(() => loadDraft()?.otherPayments || []);
 
     // Persist draft to localStorage whenever state changes
     useEffect(() => {
-        const draft = { groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial };
+        const draft = { groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial, previousBalance, payments, otherPayments };
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    }, [groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial]);
+    }, [groups, customerName, phoneNumber, deposit, orderDate, activeButtons, editingOrderId, invoiceSerial, previousBalance, payments, otherPayments]);
 
     // Auto-generate serial number if empty for new order
     useEffect(() => {
@@ -135,12 +163,25 @@ export function Calculator() {
             setCustomerName(order.customer_name || order.customerName || '');
             setPhoneNumber(order.customer_phone || order.phoneNumber || '');
             setDeposit(String(order.deposit || ''));
+
+            // الحساب القديم والدفعة المسجلة مع الفاتورة
+            const prevAdj = (order.adjustments || []).find(a => a.id === PREV_BALANCE_ID);
+            setPreviousBalance(prevAdj ? String(prevAdj.amount) : '');
+            const history = Array.isArray(order.payment_history) ? order.payment_history : [];
+            const invoicePayments = history.filter(pay => pay.kind === INVOICE_PAYMENT_KIND);
+            setPayments(invoicePayments.map((pay, i) => ({
+                id: pay.id || `inv-${Date.now()}-${i}`,
+                amount: String(pay.amount ?? ''),
+                date: pay.date ? toLocalDateStr(pay.date) : todayStr(),
+                iso: pay.date || undefined
+            })));
+            setOtherPayments(history.filter(pay => pay.kind !== INVOICE_PAYMENT_KIND));
             setOrderDate(order.date ? order.date.split('T')[0] : new Date().toISOString().split('T')[0]);
 
             // Restore active buttons and adjustments!
             const restoredButtons = order.activeButtons?.length
                 ? order.activeButtons
-                : (order.adjustments ? order.adjustments.map(a => a.id) : []);
+                : (order.adjustments ? order.adjustments.map(a => a.id).filter(id => id !== PREV_BALANCE_ID) : []);
             setActiveButtons(restoredButtons);
 
             setInvoiceSerial(order.serialNumber || order.serial_number || generateSerialNumber(orders));
@@ -214,6 +255,9 @@ export function Calculator() {
             setCustomerName('');
             setPhoneNumber('');
             setDeposit('');
+            setPreviousBalance('');
+            setPayments([]);
+            setOtherPayments([]);
             setOrderDate(new Date().toISOString().split('T')[0]);
             setActiveButtons([]);
             setEditingOrderId(null);
@@ -230,6 +274,22 @@ export function Calculator() {
         }
         return { ...group, typeId, extras: group.extras || [] };
     });
+
+    // ── الدفعات المستلمة (كل دفعة بتاريخها) ──
+    const addPayment = () => {
+        setPayments([...payments, {
+            id: `inv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            amount: '',
+            date: todayStr(),
+            iso: new Date().toISOString()
+        }]);
+    };
+    const updatePayment = (id, field, value) => {
+        setPayments(payments.map(pay => pay.id === id ? { ...pay, [field]: value } : pay));
+    };
+    const removePayment = (id) => {
+        setPayments(payments.filter(pay => pay.id !== id));
+    };
 
     const addGroup = () => {
         setGroups([...groups, makeGroup(Date.now(), nextColorIdx(groups))]);
@@ -600,8 +660,31 @@ export function Calculator() {
             });
     };
 
-    const adjustments = getAdjustments(baseCost);
+    const previousBalanceAmount = Math.max(0, Number(previousBalance) || 0);
+    const paidAmountValue = payments.reduce((sum, pay) => sum + Math.max(0, Number(pay.amount) || 0), 0);
+    // دفعات اتسجلت قبل كده من سجل العملاء (استلام المتبقي مثلاً)
+    const otherPaidValue = otherPayments.reduce((sum, pay) => sum + Math.max(0, Number(pay.amount) || 0), 0);
+    const paidTotalValue = paidAmountValue + otherPaidValue;
+
+    // الحساب القديم بيتضاف على الإجمالي كبند مستقل (من غير ما ياخد نسبة ضريبة أو خصم)
+    const adjustments = [
+        ...getAdjustments(baseCost),
+        ...(previousBalanceAmount > 0
+            ? [{ id: PREV_BALANCE_ID, name: 'حساب قديم', type: 'fee_fixed', value: previousBalanceAmount, amount: previousBalanceAmount }]
+            : [])
+    ];
     const totalCostWithAdjustments = baseCost + adjustments.reduce((acc, adj) => acc + adj.amount, 0);
+
+    // المتبقي = الإجمالي (بالحساب القديم) - العربون - كل الدفعات المستلمة
+    const remainingAmount = Math.max(0, totalCostWithAdjustments - Number(deposit || 0) - paidTotalValue);
+
+    // الدفعات بتواريخها (للطباعة)
+    const paymentsForPrint = [
+        ...otherPayments,
+        ...payments
+            .filter(pay => Number(pay.amount) > 0)
+            .map(pay => ({ id: pay.id, amount: Number(pay.amount), date: paymentIso(pay), note: 'دفعة مستلمة' }))
+    ];
 
     const formatWhatsAppMessage = () => {
         const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
@@ -640,10 +723,16 @@ export function Calculator() {
         }
 
         const depositAmount = Number(deposit || 0);
-        const remaining = totalCostWithAdjustments - depositAmount;
+        const remaining = remainingAmount;
 
         message += `*الإجمالي المطلوب:* ${totalCostWithAdjustments.toFixed(2)} ج.م\n`;
         message += `*العربون/المقدم:* ${depositAmount.toFixed(2)} ج.م\n`;
+        [
+            ...otherPayments.map(pay => ({ amount: pay.amount, date: formatPaymentDate(pay.date) })),
+            ...payments.filter(pay => Number(pay.amount) > 0).map(pay => ({ amount: pay.amount, date: formatPaymentDate(pay.date) }))
+        ].forEach(pay => {
+            message += `*دفعة (${pay.date}):* ${Number(pay.amount).toFixed(2)} ج.م\n`;
+        });
         message += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
         message += `_التاريخ: ${new Date(orderDate).toLocaleDateString('ar-EG')}_\n`;
         message += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
@@ -672,6 +761,17 @@ export function Calculator() {
 
         const currentSerial = invoiceSerial || generateSerialNumber(orders);
 
+        // الدفعة المستلمة بتتسجل كدفعة في سجل المدفوعات (فبتتخصم من المتبقي في كل الشاشات)
+        const invoicePaymentEntry = payments
+            .filter(pay => Number(pay.amount) > 0)
+            .map(pay => ({
+                id: pay.id,
+                amount: Number(pay.amount),
+                note: 'دفعة مستلمة',
+                date: paymentIso(pay),
+                kind: INVOICE_PAYMENT_KIND
+            }));
+
         if (editingOrderId) {
             // Update existing order
             await updateOrder(editingOrderId, {
@@ -686,7 +786,8 @@ export function Calculator() {
                 activeButtons,
                 serialNumber: currentSerial,
                 deposit: Number(deposit || 0),
-                remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
+                remainingBalance: remainingAmount,
+                paymentHistory: [...otherPayments, ...invoicePaymentEntry],
             });
             alert(`تم تحديث الفاتورة (${currentSerial}) بنجاح! ✅`);
             setEditingOrderId(null);
@@ -704,7 +805,8 @@ export function Calculator() {
                 activeButtons,
                 serialNumber: currentSerial,
                 deposit: Number(deposit || 0),
-                remainingBalance: totalCostWithAdjustments - Number(deposit || 0),
+                remainingBalance: remainingAmount,
+                paymentHistory: invoicePaymentEntry,
                 date: selectedDate.toISOString()
             });
             alert(`تم حفظ الطلب بنجاح! ✅ رقم الفاتورة: ${currentSerial}`);
@@ -797,6 +899,19 @@ export function Calculator() {
                     </div>
 
                     <div className="calc-field">
+                        <label className="calc-field-label" htmlFor="calc-previous-balance">حساب قديم (ج.م)</label>
+                        <input
+                            id="calc-previous-balance"
+                            type="number"
+                            placeholder="0"
+                            value={previousBalance}
+                            onChange={e => setPreviousBalance(e.target.value)}
+                            min="0"
+                            title="مبلغ قديم على العميل بيتضاف على إجمالي الفاتورة"
+                        />
+                    </div>
+
+                    <div className="calc-field">
                         <label className="calc-field-label" htmlFor="calc-order-date">تاريخ المعاملة</label>
                         <input
                             id="calc-order-date"
@@ -805,6 +920,68 @@ export function Calculator() {
                             onChange={e => setOrderDate(e.target.value)}
                             title="تاريخ المعاملة"
                         />
+                    </div>
+                </div>
+
+                {/* الدفعات المستلمة: كل دفعة بتاريخها */}
+                <div className="payments-box">
+                    <div className="payments-box-header">
+                        <span className="payments-box-title">الدفعات المستلمة</span>
+                        <button type="button" className="btn-add-payment" onClick={addPayment}>
+                            <Plus size={14} /> إضافة دفعة
+                        </button>
+                    </div>
+                    {payments.length + otherPayments.length === 0 ? (
+                        <p className="payments-empty">لا توجد دفعات. اضغط "إضافة دفعة" لما العميل يدفع جزء من الحساب، وهتتسجل بتاريخها.</p>
+                    ) : (
+                        <div className="payments-list">
+                            {otherPayments.map(pay => (
+                                <div key={pay.id} className="payment-row-readonly">
+                                    <span className="payment-readonly-date">{formatPaymentDate(pay.date)}</span>
+                                    <span className="payment-readonly-note">{pay.note || 'دفعة'}</span>
+                                    <strong>{Number(pay.amount).toFixed(2)} ج.م</strong>
+                                </div>
+                            ))}
+                            {payments.map(pay => (
+                                <div key={pay.id} className="payment-row">
+                                    <input
+                                        type="date"
+                                        value={pay.date}
+                                        onChange={e => updatePayment(pay.id, 'date', e.target.value)}
+                                        title="تاريخ الدفعة"
+                                    />
+                                    <input
+                                        type="number"
+                                        placeholder="المبلغ (ج.م)"
+                                        value={pay.amount}
+                                        onChange={e => updatePayment(pay.id, 'amount', e.target.value)}
+                                        min="0"
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn-remove-payment"
+                                        onClick={() => removePayment(pay.id)}
+                                        title="حذف الدفعة"
+                                    >
+                                        <Trash size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ملخص الدفعات والمتبقي من الحساب */}
+                    <div className="payments-summary">
+                        {payments.length + otherPayments.length > 0 && (
+                            <div className="payments-total">
+                                <span>إجمالي الدفعات</span>
+                                <strong>{paidTotalValue.toFixed(2)} ج.م</strong>
+                            </div>
+                        )}
+                        <div className="payments-total payments-remaining">
+                            <span>المتبقي من الحساب</span>
+                            <strong>{remainingAmount.toFixed(2)} ج.م</strong>
+                        </div>
                     </div>
                 </div>
 
@@ -1282,6 +1459,12 @@ export function Calculator() {
                             <span className="total-value-small">{baseCost.toFixed(2)} ج.م</span>
                         </div>
                     )}
+                    {previousBalanceAmount > 0 && (
+                        <div className="total-item">
+                            <span className="total-label">حساب قديم:</span>
+                            <span className="total-value-small">+{previousBalanceAmount.toFixed(2)} ج.م</span>
+                        </div>
+                    )}
                     <div className="total-item final-cost-item">
                         <span className="total-label">الحساب الإجمالي:</span>
                         <span className="total-value">{totalCostWithAdjustments.toFixed(2)} ج.م</span>
@@ -1290,9 +1473,15 @@ export function Calculator() {
                         <span className="total-label">العربون / المقدم:</span>
                         <span className="total-value text-green" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{(Number(deposit || 0)).toFixed(2)} ج.م</span>
                     </div>
+                    {paidTotalValue > 0 && (
+                        <div className="total-item">
+                            <span className="total-label">الدفعات المستلمة:</span>
+                            <span className="total-value-small" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{paidTotalValue.toFixed(2)} ج.م</span>
+                        </div>
+                    )}
                     <div className="total-item remaining-item">
                         <span className="total-label font-bold" style={{ fontWeight: 'bold' }}>المتبقي للاستلام:</span>
-                        <span className="total-value font-bold text-red" style={{ color: '#c62828', fontWeight: 'bold' }}>{(totalCostWithAdjustments - Number(deposit || 0)).toFixed(2)} ج.م</span>
+                        <span className="total-value font-bold text-red" style={{ color: '#c62828', fontWeight: 'bold' }}>{remainingAmount.toFixed(2)} ج.م</span>
                     </div>
                 </div>
             </div>
@@ -1311,7 +1500,8 @@ export function Calculator() {
                 adjustments={adjustments}
                 totalCost={totalCostWithAdjustments}
                 deposit={deposit}
-                remainingBalance={totalCostWithAdjustments - Number(deposit || 0)}
+                remainingBalance={remainingAmount}
+                payments={paymentsForPrint}
                 printSettings={printSettings}
             />
         </div>

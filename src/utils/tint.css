@@ -90,3 +90,236 @@
 .inventory-card.tinted .inventory-card-content h3 {
     color: var(--tint-pill-fg);
 }
+
+/* ═════════ الدفعات المستلمة (الحاسبة) ═════════ */
+.payments-box {
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background-color: var(--input-bg);
+}
+
+.payments-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.payments-box-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.btn-add-payment {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--button-bg);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.btn-add-payment:hover {
+    background-color: var(--button-hover);
+}
+
+.payments-empty {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.payments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payment-row {
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.payment-row input {
+    width: 100%;
+    height: 38px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.dark .payment-row input[type='date'],
+[data-theme='dark'] .payment-row input[type='date'] {
+    color-scheme: dark;
+}
+
+.btn-remove-payment {
+    background: transparent;
+    color: var(--delete-color);
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-payment:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+.payment-row-readonly {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    padding: 6px 10px;
+    background-color: var(--table-header-bg);
+    border-radius: 6px;
+}
+
+.payment-readonly-note {
+    opacity: 0.7;
+    flex: 1;
+}
+
+.payments-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    border-top: 1px dashed var(--border-color);
+    padding-top: 6px;
+}
+
+.payments-total strong {
+    color: #2e7d32;
+}
+
+@media (max-width: 520px) {
+    .payment-row {
+        grid-template-columns: 1fr 1fr auto;
+    }
+}
+
+/* ═════════ تواريخ الدفعات في سجل العملاء ═════════ */
+.payment-date-row {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.85;
+}
+
+/* ═════════ المتبقي من الحساب (صندوق الدفعات) ═════════ */
+.payments-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.payments-summary .payments-total {
+    margin: 0;
+}
+
+.payments-remaining {
+    border-top: none;
+    padding-top: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.payments-remaining strong {
+    color: #c62828;
+}
+
+/* ═════════ سجل العميل: الحساب القديم + سجل الدفعات ═════════ */
+.prev-balance-row {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e65100;
+}
+
+.dark .prev-balance-row,
+[data-theme='dark'] .prev-balance-row {
+    color: #ffb74d;
+}
+
+.payment-log {
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px var(--shadow);
+    margin-bottom: 25px;
+    overflow: hidden;
+}
+
+.payment-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: var(--table-header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payment-log-header h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.payment-log-count {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+}
+
+.payment-log-table-wrap {
+    max-height: 280px;
+    overflow: auto;
+}
+
+.payment-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+    font-size: 13px;
+}
+
+.payment-log-table th,
+.payment-log-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payment-log-table th {
+    position: sticky;
+    top: 0;
+    background-color: var(--table-header-bg);
+    font-weight: 600;
+}
+
+.payment-log-table tfoot td {
+    font-weight: 800;
+    background-color: var(--table-header-bg);
+    border-bottom: none;
+}
+
+.payment-log-amount {
+    font-weight: 700;
+    white-space: nowrap;
+}

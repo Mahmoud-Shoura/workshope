@@ -8,6 +8,20 @@ import './History.css';
 
 // Key used to pass order data to Calculator for editing (avoids race condition with CustomEvent)
 const EDIT_ORDER_KEY = 'edit_order_pending';
+const PREV_BALANCE_ID = 'previous_balance'; // الحساب القديم بيتخزن كبند ضمن الرسوم
+
+const formatDate = (d) => (d ? new Date(d).toLocaleDateString('ar-EG') : '');
+
+// الدفعات المسجلة على الفاتورة (كل دفعة بتاريخها)
+const getPayments = (order) =>
+    Array.isArray(order?.payment_history)
+        ? order.payment_history.filter(p => Number(p.amount) > 0)
+        : [];
+
+const getPrevBalance = (order) => {
+    const adj = (order?.adjustments || []).find(a => a.id === PREV_BALANCE_ID);
+    return adj ? Number(adj.amount) || 0 : 0;
+};
 
 export function History({ onViewChange }) {
     const { orders, deleteOrder, markOrderPaid, userRole, printSettings } = useGlassStore();
@@ -74,6 +88,9 @@ export function History({ onViewChange }) {
 
         msg += `*الإجمالي المطلوب:* ${totalCost.toFixed(2)} ج.م\n`;
         msg += `*العربون/المقدم:* ${dep.toFixed(2)} ج.م\n`;
+        getPayments(order).forEach(pay => {
+            msg += `*دفعة (${formatDate(pay.date)}):* ${Number(pay.amount).toFixed(2)} ج.م\n`;
+        });
         msg += `*المتبقي للاستلام:* ${remaining.toFixed(2)} ج.م\n\n`;
         msg += `_التاريخ: ${new Date(order.date).toLocaleDateString('ar-EG')}_\n`;
         msg += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
@@ -199,6 +216,27 @@ export function History({ onViewChange }) {
             return serial.includes(q) || date.includes(q);
         });
 
+        // سجل دفعات العميل (عربون + كل دفعة بتاريخها) عبر كل فواتيره
+        const paymentLog = allCustomerOrders.flatMap(order => {
+            const serial = order.serialNumber || order.serial_number || '';
+            const entries = [];
+            const dep = Number(order.deposit || 0);
+            if (dep > 0) {
+                entries.push({ key: `${order.id}-dep`, date: order.date, serial, note: 'عربون', amount: dep });
+            }
+            getPayments(order).forEach((pay, i) => {
+                entries.push({
+                    key: `${order.id}-${pay.id || i}`,
+                    date: pay.date || order.date,
+                    serial,
+                    note: pay.note || 'دفعة',
+                    amount: Number(pay.amount)
+                });
+            });
+            return entries;
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+        const paymentLogTotal = paymentLog.reduce((sum, e) => sum + e.amount, 0);
+
         return (
             <div className="history-container">
                 <div className="customer-detail-header">
@@ -227,12 +265,50 @@ export function History({ onViewChange }) {
                             <span className="stat-value">{selectedCustomer.totalCost.toLocaleString()} ج.م</span>
                         </div>
                         <div className="stat-card text-green-card">
-                            <span className="stat-label">إجمالي المدفوع (عربون)</span>
+                            <span className="stat-label">إجمالي المدفوع (عربون ودفعات)</span>
                             <span className="stat-value">{selectedCustomer.totalDeposit.toLocaleString()} ج.م</span>
                         </div>
                         <div className="stat-card text-red-card">
                             <span className="stat-label">إجمالي المتبقي</span>
                             <span className="stat-value">{selectedCustomer.totalRemaining.toLocaleString()} ج.م</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* سجل دفعات العميل */}
+                {!isEmployee && paymentLog.length > 0 && (
+                    <div className="payment-log">
+                        <div className="payment-log-header">
+                            <h3>سجل دفعات العميل</h3>
+                            <span className="payment-log-count">{paymentLog.length} دفعة</span>
+                        </div>
+                        <div className="payment-log-table-wrap">
+                            <table className="payment-log-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الفاتورة</th>
+                                        <th>البيان</th>
+                                        <th>المبلغ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paymentLog.map(entry => (
+                                        <tr key={entry.key}>
+                                            <td>{formatDate(entry.date)}</td>
+                                            <td>{entry.serial || '—'}</td>
+                                            <td>{entry.note}</td>
+                                            <td className="text-green payment-log-amount">{entry.amount.toLocaleString()} ج.م</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={3}>إجمالي المدفوع</td>
+                                        <td className="text-green payment-log-amount">{paymentLogTotal.toLocaleString()} ج.م</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                 )}
@@ -273,6 +349,8 @@ export function History({ onViewChange }) {
                                 const phone = order.customer_phone || order.phoneNumber;
                                 const baseCost = order.baseCost || order.base_cost;
                                 const serial = order.serialNumber || order.serial_number;
+                                const prevBalance = getPrevBalance(order);
+                                const otherAdjustments = (order.adjustments || []).filter(a => a.id !== PREV_BALANCE_ID);
                                 return (
                                     <tr key={order.id} className="tinted" style={{ '--tint-h': hueForSerial(serial, order.id) }}>
                                         <td className="history-date">
@@ -301,10 +379,13 @@ export function History({ onViewChange }) {
                                         <td>
                                             <div className="price-breakdown">
                                                 <div className="final-price">{totalCost.toLocaleString()} ج.م</div>
-                                                {order.adjustments && order.adjustments.length > 0 && (
+                                                {prevBalance > 0 && (
+                                                    <div className="prev-balance-row">منها حساب قديم: {prevBalance.toLocaleString()} ج.م</div>
+                                                )}
+                                                {otherAdjustments.length > 0 && (
                                                     <div className="adjustments-tooltip">
                                                         <span>الأساسي: {Number(baseCost || 0).toLocaleString()} ج.م</span>
-                                                        {order.adjustments.map((adj, idx) => (
+                                                        {otherAdjustments.map((adj, idx) => (
                                                             <span key={idx}>
                                                                 {adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م
                                                             </span>
@@ -316,6 +397,11 @@ export function History({ onViewChange }) {
                                         <td>
                                             <div className="payment-breakdown">
                                                 <div className="deposit-val text-green">المقدم: {dep.toLocaleString()} ج.م</div>
+                                                {getPayments(order).map((pay, i) => (
+                                                    <div key={pay.id || i} className="payment-date-row text-green">
+                                                        دفعة {formatDate(pay.date)}: {Number(pay.amount).toLocaleString()} ج.م
+                                                    </div>
+                                                ))}
                                                 <div className="remaining-val text-red">الباقي: {rem.toLocaleString()} ج.م</div>
                                             </div>
                                         </td>
@@ -474,6 +560,12 @@ export function History({ onViewChange }) {
                                             <span>العربون المدفوع:</span>
                                             <strong>{dep.toLocaleString()} ج.م</strong>
                                         </div>
+                                        {getPayments(order).map((pay, i) => (
+                                            <div key={pay.id || i} className="payment-row text-green">
+                                                <span>دفعة {formatDate(pay.date)}:</span>
+                                                <strong>{Number(pay.amount).toLocaleString()} ج.م</strong>
+                                            </div>
+                                        ))}
                                         <div className="payment-row text-red">
                                             <span>المتبقي المطلوب:</span>
                                             <strong>{rem.toLocaleString()} ج.م</strong>
@@ -500,6 +592,7 @@ export function History({ onViewChange }) {
                     totalCost={printSheetOrder?.total_cost || printSheetOrder?.totalCost || 0}
                     deposit={printSheetOrder?.deposit || 0}
                     remainingBalance={printSheetOrder?.remaining_balance ?? printSheetOrder?.remainingBalance}
+                    payments={printSheetOrder ? getPayments(printSheetOrder) : []}
                     printSettings={printSettings}
                 />
             </div>
@@ -555,7 +648,7 @@ export function History({ onViewChange }) {
                                         <strong>{customer.totalCost.toLocaleString()} ج.م</strong>
                                     </div>
                                     <div className="financial-item text-green">
-                                        <span>إجمالي العربون:</span>
+                                        <span>إجمالي المدفوع:</span>
                                         <strong>{customer.totalDeposit.toLocaleString()} ج.م</strong>
                                     </div>
                                     <div className={`financial-item ${hasRemaining ? 'text-red highlight-remaining' : 'text-green'}`}>

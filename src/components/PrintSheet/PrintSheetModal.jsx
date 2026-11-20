@@ -47,6 +47,7 @@ export function PrintSheetModal({
     totalCost = 0,
     deposit = 0,
     remainingBalance,
+    payments = [],
     printSettings = {}
 }) {
     const printContentRef = useRef(null);
@@ -74,6 +75,10 @@ export function PrintSheetModal({
         ? Number(remainingBalance)
         : Math.max(0, safeTotalCost - safeDeposit);
 
+    // دفعات مستلمة غير العربون (الفرق بين الإجمالي والعربون والمتبقي)
+    const rawPaid = remainingBalance !== undefined ? safeTotalCost - safeDeposit - safeRemaining : 0;
+    const safePaid = rawPaid > 0.005 ? rawPaid : 0;
+
     // إجماليات الجدول
     const sumQty = items.reduce((t, i) => t + Number(i.qty || 0), 0);
     const sumArea = items.reduce((t, i) => t + m2AreaOf(i), 0);
@@ -93,6 +98,8 @@ export function PrintSheetModal({
     const formattedDate = orderDate
         ? new Date(orderDate).toLocaleDateString('ar-EG')
         : new Date().toLocaleDateString('ar-EG');
+
+    const payDate = (d) => (d ? new Date(d).toLocaleDateString('ar-EG') : '');
 
     const handlePrint = () => {
         // الريسيد بيتطبع على ورق حراري 80mm، والفاتورة على A4
@@ -225,7 +232,7 @@ export function PrintSheetModal({
                                         <th className="ps-col-dim">الطول<span className="ps-unit">سم</span></th>
                                         <th className="ps-col-dim">العرض<span className="ps-unit">سم</span></th>
                                         <th className="ps-col-qty">العدد</th>
-                                        <th className="ps-col-area">التكعيب</th>
+                                        <th className="ps-col-area">المساحة والوصف</th>
                                         <th className="ps-col-uprice">سعر الوحدة<span className="ps-unit">جنيه</span></th>
                                         <th className="ps-col-price">الإجمالي<span className="ps-unit">جنيه</span></th>
                                     </tr>
@@ -338,6 +345,17 @@ export function PrintSheetModal({
                                     <span className="ps-lbl">العربون المقدم</span>
                                     <strong className="ps-green">{safeDeposit.toFixed(2)} جنيه</strong>
                                 </div>
+                                {payments.length > 0 ? payments.map((pay, idx) => (
+                                    <div key={pay.id || idx} className="ps-tot-row ps-tot-deposit">
+                                        <span className="ps-lbl">دفعة بتاريخ <bdi dir="ltr">{payDate(pay.date)}</bdi></span>
+                                        <strong className="ps-green">{Number(pay.amount || 0).toFixed(2)} جنيه</strong>
+                                    </div>
+                                )) : safePaid > 0 && (
+                                    <div className="ps-tot-row ps-tot-deposit">
+                                        <span className="ps-lbl">دفعة مستلمة</span>
+                                        <strong className="ps-green">{safePaid.toFixed(2)} جنيه</strong>
+                                    </div>
+                                )}
                                 <div className="ps-tot-row ps-tot-remaining">
                                     <span className="ps-lbl">المتبقي للاستلام</span>
                                     <strong className="ps-red">{safeRemaining.toFixed(2)} جنيه</strong>
@@ -387,7 +405,7 @@ export function PrintSheetModal({
                                         <span>{total.toFixed(2)}</span>
                                     </div>
                                     <div className="ps-rc-item-sub">
-                                        <bdi dir="ltr">{qty} × {perPiece.toFixed(2)}</bdi> قطعة
+                                        <bdi dir="ltr">{qty} × {perPiece.toFixed(2)}</bdi> جنيه
                                     </div>
                                 </div>
                             );
@@ -403,6 +421,14 @@ export function PrintSheetModal({
                         ))}
                         <div className="ps-rc-row ps-rc-total"><span className="ps-lbl">الإجمالي</span><strong>{safeTotalCost.toFixed(2)} جنيه</strong></div>
                         <div className="ps-rc-row"><span className="ps-lbl">العربون</span><span>{safeDeposit.toFixed(2)} جنيه</span></div>
+                        {payments.length > 0 ? payments.map((pay, idx) => (
+                            <div key={pay.id || idx} className="ps-rc-row">
+                                <span className="ps-lbl">دفعة <bdi dir="ltr">{payDate(pay.date)}</bdi></span>
+                                <span>{Number(pay.amount || 0).toFixed(2)} جنيه</span>
+                            </div>
+                        )) : safePaid > 0 && (
+                            <div className="ps-rc-row"><span className="ps-lbl">دفعة مستلمة</span><span>{safePaid.toFixed(2)} جنيه</span></div>
+                        )}
                         <div className="ps-rc-row ps-rc-total"><span className="ps-lbl">المتبقي</span><strong>{safeRemaining.toFixed(2)} جنيه</strong></div>
 
                         <div className="ps-rc-sep" />
