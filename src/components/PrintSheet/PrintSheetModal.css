@@ -540,3 +540,111 @@
     border-color: #c62828 !important;
     color: #fff !important;
 }
+
+
+/* ═══════════════ تبويب فاتورة / ريسيد ═══════════════ */
+.ps-view-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    background: #e3e6ea;
+    border-radius: 8px;
+}
+
+.ps-view-tabs button {
+    border: none;
+    background: transparent;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #444;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ps-view-tabs button.active {
+    background: #fff;
+    color: #1565c0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* ═══════════════ الريسيد (80mm) ═══════════════ */
+.ps-receipt,
+.ps-receipt * {
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+.ps-receipt {
+    direction: rtl;
+    text-align: right;
+    width: 302px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 16px 10px 24px;
+    background: #fff;
+    color: #000;
+    font-size: 12px;
+    overflow-y: auto;
+}
+
+.ps-rc-center {
+    text-align: center;
+}
+
+.ps-rc-name {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 2px;
+}
+
+.ps-rc-sub {
+    font-size: 11px;
+    color: #333;
+}
+
+.ps-rc-sep {
+    border-top: 1px dashed #000;
+    margin: 8px 0;
+}
+
+.ps-rc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.ps-rc-item {
+    padding: 4px 0;
+    border-bottom: 1px dotted #999;
+}
+
+.ps-rc-item-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 700;
+}
+
+.ps-rc-item-sub {
+    font-size: 11px;
+    color: #333;
+}
+
+.ps-rc-total {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+@media print {
+    .ps-receipt {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+        overflow: visible;
+    }
+}
