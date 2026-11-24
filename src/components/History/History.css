@@ -713,3 +713,526 @@
         text-align: right;
     }
 }
+
+
+/* ════════════════════════════════════════════════════
+   Sticky Search Bar
+════════════════════════════════════════════════════ */
+.history-sticky-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--bg-color);
+    padding: 10px 0 10px 0;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.history-title-inline {
+    font-size: 18px;
+    font-weight: 700;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.sticky-search-wrap {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 2px 12px;
+    box-shadow: 0 1px 4px var(--shadow);
+}
+
+.sticky-search-wrap .search-icon {
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.sticky-search-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 8px 4px !important;
+    width: 100%;
+    outline: none;
+    font-size: 14px;
+    color: var(--text-color);
+}
+.sticky-search-input:focus { box-shadow: none !important; }
+
+.search-clear-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.search-clear-btn:hover { opacity: 1; }
+
+/* ════════════════════════════════════════════════════
+   Day label next to date
+════════════════════════════════════════════════════ */
+.date-day {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--button-bg);
+    margin-bottom: 1px;
+}
+
+.hc-day {
+    font-weight: 700;
+    color: var(--button-bg);
+    font-size: 12px;
+}
+
+/* ════════════════════════════════════════════════════
+   Orders Toolbar (multi-select controls)
+════════════════════════════════════════════════════ */
+.orders-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.orders-toolbar h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.orders-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selection-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--button-bg);
+    background: rgba(76, 175, 80, 0.12);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.btn-multi-print {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1565c0;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-multi-print:hover { background: #0d47a1; }
+
+.btn-clear-selection {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    color: var(--delete-color);
+    border: 1px solid var(--delete-color);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-clear-selection:hover { background: var(--delete-color); color: white; }
+
+.btn-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-select-all:hover { border-color: var(--button-bg); color: var(--button-bg); }
+.btn-select-all.active { background: var(--button-bg); color: #fff; border-color: var(--button-bg); }
+
+/* ── Select cell in table ── */
+.select-cell {
+    cursor: pointer;
+    text-align: center;
+    padding: 0 8px !important;
+}
+
+.check-icon {
+    color: var(--border-color);
+    transition: color 0.15s;
+}
+.check-icon.checked { color: var(--button-bg); }
+.select-cell:hover .check-icon { color: var(--button-bg); }
+
+/* ── Selected row/card highlight ── */
+.row-selected {
+    background-color: rgba(76, 175, 80, 0.07) !important;
+    outline: 2px solid rgba(76, 175, 80, 0.4);
+}
+
+.card-selected {
+    border-color: var(--button-bg) !important;
+    background-color: rgba(76, 175, 80, 0.06) !important;
+}
+
+/* ── Card select button ── */
+.card-select-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.card-header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+/* ════════════════════════════════════════════════════
+   Multi-Print Modal
+════════════════════════════════════════════════════ */
+.multi-print-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+    padding: 10px;
+    overflow-y: auto;
+    backdrop-filter: blur(3px);
+}
+
+.multi-print-modal {
+    background: #fff;
+    color: #111;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 860px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+.multi-print-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #f4f6f8;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.multi-print-title { font-size: 15px; font-weight: 700; color: #333; }
+
+.multi-print-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.multi-print-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.multi-print-page {
+    background: #fff;
+    padding: 24px 28px;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-size: 13px;
+    direction: rtl;
+    color: #111;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.page-break-before { page-break-before: always; }
+
+.mp-title {
+    text-align: center;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #222;
+}
+.mp-title h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; }
+.mp-title p  { margin: 0; font-size: 12px; color: #666; }
+
+.mp-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.mp-info-box {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.mp-box-customer { border-right: 4px solid #1565c0; }
+.mp-box-workshop { border-right: 4px solid #2e7d32; }
+
+.mp-box-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f0f4f8;
+    border-bottom: 1px solid #ddd;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.mp-serial-pill {
+    background: #1565c0;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.mp-serial-val { font-weight: 800; color: #1565c0; }
+
+.mp-info-table { width: 100%; border-collapse: collapse; }
+.mp-info-table td { padding: 5px 10px; border-bottom: 1px dashed #eee; font-size: 12px; }
+.mp-info-table tr:last-child td { border-bottom: none; }
+.mp-info-table td:first-child { color: #666; font-weight: 600; white-space: nowrap; width: 40%; }
+
+.mp-section-label {
+    font-weight: 700;
+    font-size: 12px;
+    color: #333;
+    margin-bottom: 5px;
+    padding-right: 8px;
+    border-right: 3px solid #1565c0;
+}
+
+.mp-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: right;
+    border: 1px solid #ccc;
+    margin-bottom: 14px;
+    table-layout: fixed;
+}
+.mp-items-table th {
+    background: #eef2f5;
+    padding: 7px 6px;
+    border-bottom: 2px solid #bbb;
+    border-left: 1px solid #ccc;
+    font-weight: 700;
+    font-size: 11px;
+}
+.mp-items-table td {
+    padding: 6px;
+    border-bottom: 1px solid #eee;
+    border-left: 1px solid #eee;
+}
+.mp-items-table th:last-child,
+.mp-items-table td:last-child { border-left: none; }
+.mp-row-even { background: #fff; }
+.mp-row-odd  { background: #f8fafc; }
+
+.mp-totals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.mp-totals-col,
+.mp-totals-summary {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.mp-tot-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 2px 0;
+    border-bottom: 1px dashed #eee;
+}
+.mp-tot-row:last-child { border-bottom: none; }
+.mp-adj { background: rgba(0,0,0,0.02); border-radius: 3px; padding: 2px 5px; }
+.mp-tot-total { border-top: 2px solid #333; padding-top: 6px; font-weight: 800; font-size: 13px; }
+.mp-tot-remaining { font-weight: 800; font-size: 13px; }
+.mp-green { color: #2e7d32; font-weight: 700; }
+.mp-red   { color: #c62828; font-weight: 800; }
+.mp-blue  { color: #1565c0; font-weight: 700; }
+
+.mp-footer {
+    text-align: center;
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
+    color: #666;
+    font-size: 11px;
+}
+.mp-footer p { margin: 0; }
+
+/* ── Shared button styles (reused from PrintSheet) ── */
+.ps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s;
+    white-space: nowrap;
+}
+.ps-btn-print { background: #1565c0; color: #fff; }
+.ps-btn-print:hover { background: #0d47a1; }
+.ps-btn-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #555;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.ps-btn-close:hover { background: rgba(0,0,0,0.08); }
+
+/* ════════════════════════════════════════════════════
+   Print CSS for multi-print
+════════════════════════════════════════════════════ */
+@media print {
+    body > *:not(.multi-print-overlay):not(.ps-overlay) { display: none !important; }
+
+    .multi-print-overlay,
+    .ps-overlay {
+        position: static !important;
+        background: transparent !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    .multi-print-modal,
+    .ps-modal {
+        max-width: 100% !important;
+        max-height: none !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+
+    .multi-print-body { background: white !important; padding: 0 !important; gap: 0 !important; }
+    .multi-print-page { box-shadow: none !important; border-radius: 0 !important; padding: 10mm 12mm !important; }
+    .page-break-before { page-break-before: always !important; }
+
+    .mp-info-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+    .mp-totals    { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+
+    .no-print { display: none !important; }
+
+    @page {
+        margin: 8mm 10mm;
+        size: A4 portrait;
+    }
+}
+
+/* ════════════════════════════════════════════════════
+   Mobile updates
+════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .history-sticky-bar {
+        top: 0;
+        padding: 8px 0;
+        gap: 8px;
+    }
+
+    .history-title-inline {
+        font-size: 15px;
+        display: none; /* hide title on small screens to save space, search takes full width */
+    }
+
+    .sticky-search-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .orders-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .orders-toolbar-actions {
+        width: 100%;
+    }
+
+    .btn-multi-print,
+    .btn-select-all,
+    .btn-clear-selection {
+        flex: 1;
+        justify-content: center;
+        font-size: 12px;
+        padding: 7px 8px;
+    }
+
+    .multi-print-modal { max-height: 100vh; border-radius: 0; }
+    .multi-print-body  { padding: 8px; gap: 10px; }
+    .multi-print-page  { padding: 14px; }
+
+    .mp-info-grid { grid-template-columns: 1fr; }
+    .mp-totals    { grid-template-columns: 1fr; }
+}

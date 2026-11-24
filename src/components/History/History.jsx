@@ -1,18 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { MessageCircle, ArrowRight, Trash2, Search, User, Phone, Edit2, CheckCircle, Printer } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    MessageCircle, ArrowRight, Trash2, Search, User, Phone,
+    Edit2, CheckCircle, Printer, Square, CheckSquare, XCircle, X
+} from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
 import { hueForSerial } from '../../utils/tint';
 import '../../utils/tint.css';
 import './History.css';
 
-// Key used to pass order data to Calculator for editing (avoids race condition with CustomEvent)
 const EDIT_ORDER_KEY = 'edit_order_pending';
-const PREV_BALANCE_ID = 'previous_balance'; // الحساب القديم بيتخزن كبند ضمن الرسوم
+const PREV_BALANCE_ID = 'previous_balance';
+
+const WEEKDAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString('ar-EG') : '');
 
-// الدفعات المسجلة على الفاتورة (كل دفعة بتاريخها)
+const formatDateFull = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    const day = WEEKDAYS_AR[dt.getDay()];
+    return `${day} ${dt.toLocaleDateString('ar-EG')}`;
+};
+
 const getPayments = (order) =>
     Array.isArray(order?.payment_history)
         ? order.payment_history.filter(p => Number(p.amount) > 0)
@@ -23,6 +33,152 @@ const getPrevBalance = (order) => {
     return adj ? Number(adj.amount) || 0 : 0;
 };
 
+/* ─────────────────────────────────────────────────────
+   Multi-Invoice Print Modal — يطبع فواتير محددة معاً
+───────────────────────────────────────────────────── */
+function MultiPrintModal({ orders, onClose, printSettings }) {
+    if (!orders || orders.length === 0) return null;
+
+    const handlePrint = () => window.print();
+
+    return (
+        <div className="multi-print-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+            <div className="multi-print-modal">
+                {/* Header */}
+                <div className="multi-print-header no-print">
+                    <div className="multi-print-title">
+                        <span>طباعة {orders.length} فاتورة</span>
+                    </div>
+                    <div className="multi-print-actions">
+                        <button className="ps-btn ps-btn-print" onClick={handlePrint}>
+                            <Printer size={15} /> طباعة الكل
+                        </button>
+                        <button className="ps-btn-close" onClick={onClose}><X size={18} /></button>
+                    </div>
+                </div>
+
+                {/* Pages */}
+                <div className="multi-print-body">
+                    {orders.map((order, pageIdx) => {
+                        const workshopName = printSettings?.workshop_name || 'ورشة العمل الحديثة';
+                        const customerName = order.customer_name || order.customerName || 'عميل نقدي';
+                        const phone = order.customer_phone || order.phoneNumber || '';
+                        const serial = order.serialNumber || order.serial_number || '';
+                        const totalCost = Number(order.total_cost || order.totalCost || 0);
+                        const dep = Number(order.deposit || 0);
+                        const rem = order.remaining_balance !== undefined
+                            ? Number(order.remaining_balance)
+                            : Math.max(0, totalCost - dep);
+                        const baseCost = order.baseCost ?? order.base_cost ?? 0;
+                        const totalArea = order.totalArea ?? order.total_area ?? 0;
+                        const adjustments = (order.adjustments || []).filter(a => a.id !== PREV_BALANCE_ID);
+
+                        return (
+                            <div key={order.id} className={`multi-print-page ${pageIdx > 0 ? 'page-break-before' : ''}`}>
+                                {/* Title */}
+                                <div className="mp-title">
+                                    <h2>{workshopName}</h2>
+                                    <p>كشف تفصيلي بالقياسات وحسابات العميل</p>
+                                </div>
+
+                                {/* Info Grid */}
+                                <div className="mp-info-grid">
+                                    <div className="mp-info-box mp-box-customer">
+                                        <div className="mp-box-head">
+                                            <span>بيانات العميل والفاتورة</span>
+                                            <span className="mp-serial-pill">{serial}</span>
+                                        </div>
+                                        <table className="mp-info-table">
+                                            <tbody>
+                                                <tr><td>اسم العميل</td><td><strong>{customerName}</strong></td></tr>
+                                                <tr><td>رقم الهاتف</td><td dir="ltr">{phone || '—'}</td></tr>
+                                                <tr><td>رقم الفاتورة</td><td><strong className="mp-serial-val">{serial}</strong></td></tr>
+                                                <tr><td>تاريخ الفاتورة</td><td>{formatDateFull(order.date)}</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="mp-info-box mp-box-workshop">
+                                        <div className="mp-box-head"><span>بيانات الورشة</span></div>
+                                        <table className="mp-info-table">
+                                            <tbody>
+                                                <tr><td>اسم الورشة</td><td><strong>{workshopName}</strong></td></tr>
+                                                {printSettings?.owner_name && <tr><td>صاحب العمل</td><td>{printSettings.owner_name}</td></tr>}
+                                                {printSettings?.phone && <tr><td>الهاتف</td><td dir="ltr">{printSettings.phone}</td></tr>}
+                                                {printSettings?.address && <tr><td>العنوان</td><td>{printSettings.address}</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Items Table */}
+                                <div className="mp-section-label">تفاصيل البنود والقياسات</div>
+                                <table className="mp-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th><th>الصنف / الخامة</th>
+                                            <th>الطول</th><th>العرض</th>
+                                            <th>العدد</th><th>المساحة / الوصف</th>
+                                            <th>السعر</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(order.items || []).map((item, idx) => {
+                                            let desc = '';
+                                            if (item.isPiece) desc = item.description || 'بالقطعة';
+                                            else if (item.extras?.length) desc = `${Number(item.area || 0).toFixed(2)} م² + إضافات`;
+                                            else desc = `${Number(item.area || 0).toFixed(2)} م²`;
+                                            return (
+                                                <tr key={idx} className={idx % 2 === 0 ? 'mp-row-even' : 'mp-row-odd'}>
+                                                    <td>{idx + 1}</td>
+                                                    <td><strong>{item.typeName}</strong></td>
+                                                    <td>{item.isPiece ? '—' : (item.length || '—')}</td>
+                                                    <td>{item.isPiece ? '—' : (item.width || '—')}</td>
+                                                    <td><strong>{item.qty}</strong></td>
+                                                    <td>{desc}</td>
+                                                    <td><strong>{Number(item.cost || 0).toFixed(2)}</strong></td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+
+                                {/* Totals */}
+                                <div className="mp-totals">
+                                    <div className="mp-totals-col">
+                                        {totalArea > 0 && <div className="mp-tot-row"><span>إجمالي المساحة:</span><strong>{Number(totalArea).toFixed(2)} م²</strong></div>}
+                                        <div className="mp-tot-row"><span>الحساب الأساسي:</span><strong>{Number(baseCost).toFixed(2)} ج.م</strong></div>
+                                        {adjustments.map((adj, i) => (
+                                            <div key={i} className="mp-tot-row mp-adj">
+                                                <span>{adj.name}:</span>
+                                                <strong className={adj.amount < 0 ? 'mp-red' : 'mp-blue'}>
+                                                    {adj.amount >= 0 ? '+' : ''}{Number(adj.amount).toFixed(2)} ج.م
+                                                </strong>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mp-totals-summary">
+                                        <div className="mp-tot-row mp-tot-total"><span>الإجمالي المطلوب:</span><strong>{totalCost.toFixed(2)} ج.م</strong></div>
+                                        <div className="mp-tot-row"><span>العربون / المقدم:</span><strong className="mp-green">{dep.toFixed(2)} ج.م</strong></div>
+                                        <div className="mp-tot-row mp-tot-remaining"><span>المتبقي للاستلام:</span><strong className="mp-red">{rem.toFixed(2)} ج.م</strong></div>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="mp-footer">
+                                    <p>{printSettings?.footer_note || `نشكركم لتعاملكم معنا — ${workshopName}`}</p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════
+   Main History Component
+═══════════════════════════════════════════════════ */
 export function History({ onViewChange }) {
     const { orders, deleteOrder, markOrderPaid, userRole, printSettings } = useGlassStore();
     const isEmployee = userRole === 'employee';
@@ -30,14 +186,16 @@ export function History({ onViewChange }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [printSheetOrder, setPrintSheetOrder] = useState(null);
 
-    /* ── WhatsApp phone formatter ─ handles Egyptian numbers without country code ── */
+    // Multi-select state
+    const [selectedOrderIds, setSelectedOrderIds] = useState(new Set());
+    const [multiPrintOrders, setMultiPrintOrders] = useState(null);
+
+    const searchRef = useRef(null);
+
     const formatPhone = (raw) => {
         if (!raw) return null;
         let phone = raw.replace(/[^0-9+]/g, '');
-        // Egyptian mobile starts with 01 → replace leading 0 with 20
-        if (phone.startsWith('0') && !phone.startsWith('00')) {
-            phone = '20' + phone.slice(1);
-        }
+        if (phone.startsWith('0') && !phone.startsWith('00')) phone = '20' + phone.slice(1);
         phone = phone.replace(/^\+/, '');
         return phone || null;
     };
@@ -52,7 +210,6 @@ export function History({ onViewChange }) {
             : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : totalCost - dep);
 
         let msg = `*فاتورة حساب - ${customerName}* (${workshopName})\n\n`;
-
         (order.items || []).forEach((item, i) => {
             msg += `${i + 1}. *${item.typeName}*\n`;
             if (item.isPiece) {
@@ -61,12 +218,7 @@ export function History({ onViewChange }) {
             } else {
                 msg += `   الأبعاد: ${item.length} × ${item.width} سم\n`;
                 msg += `   الكمية: ${item.qty}\n`;
-                if (item.isAddLinear) {
-                    const perim = ((item.length + item.width) * 2 / 100 * item.qty);
-                    msg += `   المساحة: ${Number(item.area).toFixed(2)} م² + ${perim.toFixed(2)} م.ط إضافي\n`;
-                } else {
-                    msg += `   المساحة/الطول: ${Number(item.area).toFixed(2)} م²\n`;
-                }
+                msg += `   المساحة: ${Number(item.area).toFixed(2)} م²\n`;
             }
             msg += `   السعر: ${Number(item.cost).toFixed(2)} ج.م\n\n`;
         });
@@ -76,7 +228,6 @@ export function History({ onViewChange }) {
         const totalArea = order.total_area ?? order.totalArea;
         if (totalArea) msg += `*إجمالي المساحة:* ${Number(totalArea).toFixed(2)} م²\n`;
         if (baseCost != null) msg += `*الحساب الأساسي:* ${Number(baseCost).toFixed(2)} ج.م\n`;
-
         if (order.adjustments?.length) {
             msg += `--- الرسوم والخصومات ---\n`;
             order.adjustments.forEach(adj => {
@@ -85,7 +236,6 @@ export function History({ onViewChange }) {
             });
             msg += `━━━━━━━━━━━━━━━━\n`;
         }
-
         msg += `*الإجمالي المطلوب:* ${totalCost.toFixed(2)} ج.م\n`;
         msg += `*العربون/المقدم:* ${dep.toFixed(2)} ج.م\n`;
         getPayments(order).forEach(pay => {
@@ -100,45 +250,56 @@ export function History({ onViewChange }) {
     const handleSendWhatsApp = (order) => {
         const rawPhone = order.customer_phone || order.phoneNumber;
         const phone = formatPhone(rawPhone);
-        if (!phone) {
-            alert('لا يوجد رقم هاتف محفوظ لهذا الطلب');
-            return;
-        }
-        const msg = buildWhatsAppMessage(order);
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        if (!phone) { alert('لا يوجد رقم هاتف محفوظ لهذا الطلب'); return; }
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`, '_blank');
     };
 
-
     const handleDeleteOrder = (id) => {
-        if (window.confirm('هل أنت متأكد من رغبتك في حذف هذه الفاتورة نهائياً؟')) {
-            deleteOrder(id);
-        }
+        if (window.confirm('هل أنت متأكد من رغبتك في حذف هذه الفاتورة نهائياً؟')) deleteOrder(id);
     };
 
     const handleMarkPaid = (order) => {
-        if (window.confirm('تأكيد استلام المبلغ المتبقي بالكامل لهذه الفاتورة؟')) {
-            markOrderPaid(order.id);
-        }
+        if (window.confirm('تأكيد استلام المبلغ المتبقي بالكامل لهذه الفاتورة؟')) markOrderPaid(order.id);
     };
 
-    /* ── Edit: write order to localStorage/sessionStorage then switch to Calculator ── */
     const handleEditOrder = (order) => {
         try {
             localStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
             sessionStorage.setItem(EDIT_ORDER_KEY, JSON.stringify(order));
-        } catch (e) {
-            console.error('Failed to save edit order:', e);
-        }
+        } catch (e) { console.error('Failed to save edit order:', e); }
         if (onViewChange) onViewChange('calculator');
     };
 
-    // Helper to group orders by customer name
+    // ── Multi-select helpers ──
+    const toggleSelect = (id) => {
+        setSelectedOrderIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = (ordersList) => {
+        if (selectedOrderIds.size === ordersList.length) {
+            setSelectedOrderIds(new Set());
+        } else {
+            setSelectedOrderIds(new Set(ordersList.map(o => o.id)));
+        }
+    };
+
+    const handleMultiPrint = (ordersList) => {
+        const toPrint = ordersList.filter(o => selectedOrderIds.has(o.id));
+        if (toPrint.length === 0) { alert('اختار فاتورة واحدة على الأقل'); return; }
+        setMultiPrintOrders(toPrint);
+    };
+
+    const clearSelection = () => setSelectedOrderIds(new Set());
+
+    // ── Customer groups ──
     const getGroupedCustomers = () => {
         if (!orders) return [];
         const groups = {};
-
         orders.forEach(order => {
-            // Support both snake_case (from DB) and camelCase (legacy)
             const rawName = (order.customer_name || order.customerName || '').trim();
             const name = rawName || 'عميل نقدي / بدون اسم';
             const phone = order.customer_phone || order.phoneNumber || '';
@@ -146,34 +307,20 @@ export function History({ onViewChange }) {
             const dep = Number(order.deposit || 0);
             const remaining = order.remaining_balance !== undefined ? Number(order.remaining_balance)
                 : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
-            const paidTotal = totalCost - remaining; // العربون + كل الدفعات
+            const paidTotal = totalCost - remaining;
             if (!groups[name]) {
-                groups[name] = {
-                    customerName: name,
-                    isNameless: !rawName,
-                    phoneNumber: phone,
-                    ordersCount: 0,
-                    totalCost: 0,
-                    totalDeposit: 0,
-                    totalRemaining: 0,
-                    orders: []
-                };
+                groups[name] = { customerName: name, isNameless: !rawName, phoneNumber: phone, ordersCount: 0, totalCost: 0, totalDeposit: 0, totalRemaining: 0, orders: [] };
             }
             groups[name].ordersCount += 1;
             groups[name].totalCost += totalCost;
             groups[name].totalDeposit += paidTotal;
             groups[name].totalRemaining += remaining;
             groups[name].orders.push(order);
-
-            if (phone && !groups[name].phoneNumber) {
-                groups[name].phoneNumber = phone;
-            }
+            if (phone && !groups[name].phoneNumber) groups[name].phoneNumber = phone;
         });
 
         const q = searchQuery.trim().toLowerCase();
         if (!q) return Object.values(groups);
-
-        // Filter by customer name, phone, or invoice serial number
         return Object.values(groups).filter(customer => {
             const matchesName = customer.customerName.toLowerCase().includes(q);
             const matchesPhone = (customer.phoneNumber || '').includes(q);
@@ -188,12 +335,12 @@ export function History({ onViewChange }) {
     const groupedCustomers = getGroupedCustomers();
     const selectedCustomer = selectedCustomerName ? groupedCustomers.find(c => c.customerName === selectedCustomerName) : null;
 
-    // Reset selected customer if they no longer have orders (e.g. all deleted)
     useEffect(() => {
-        if (selectedCustomerName && !selectedCustomer) {
-            setSelectedCustomerName(null);
-        }
+        if (selectedCustomerName && !selectedCustomer) setSelectedCustomerName(null);
     }, [orders, selectedCustomerName, selectedCustomer]);
+
+    // Clear selection when switching views
+    useEffect(() => { setSelectedOrderIds(new Set()); }, [selectedCustomerName]);
 
     if (!orders || orders.length === 0) {
         return (
@@ -204,9 +351,10 @@ export function History({ onViewChange }) {
         );
     }
 
-    // 1. Render Detailed Customer View
+    /* ══════════════════════════════════════════════════
+       Customer Detail View
+    ══════════════════════════════════════════════════ */
     if (selectedCustomer) {
-        // Sort orders of this customer by date descending
         const allCustomerOrders = [...selectedCustomer.orders].sort((a, b) => new Date(b.date) - new Date(a.date));
         const q = searchQuery.trim().toLowerCase();
         const sortedOrders = allCustomerOrders.filter(o => {
@@ -216,66 +364,65 @@ export function History({ onViewChange }) {
             return serial.includes(q) || date.includes(q);
         });
 
-        // سجل دفعات العميل (عربون + كل دفعة بتاريخها) عبر كل فواتيره
         const paymentLog = allCustomerOrders.flatMap(order => {
             const serial = order.serialNumber || order.serial_number || '';
             const entries = [];
             const dep = Number(order.deposit || 0);
-            if (dep > 0) {
-                entries.push({ key: `${order.id}-dep`, date: order.date, serial, note: 'عربون', amount: dep });
-            }
+            if (dep > 0) entries.push({ key: `${order.id}-dep`, date: order.date, serial, note: 'عربون', amount: dep });
             getPayments(order).forEach((pay, i) => {
-                entries.push({
-                    key: `${order.id}-${pay.id || i}`,
-                    date: pay.date || order.date,
-                    serial,
-                    note: pay.note || 'دفعة',
-                    amount: Number(pay.amount)
-                });
+                entries.push({ key: `${order.id}-${pay.id || i}`, date: pay.date || order.date, serial, note: pay.note || 'دفعة', amount: Number(pay.amount) });
             });
             return entries;
         }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
         const paymentLogTotal = paymentLog.reduce((sum, e) => sum + e.amount, 0);
+        const allSelected = selectedOrderIds.size === sortedOrders.length && sortedOrders.length > 0;
+        const anySelected = selectedOrderIds.size > 0;
 
         return (
             <div className="history-container">
-                <div className="customer-detail-header">
-                    <button
-                        onClick={() => setSelectedCustomerName(null)}
-                        className="btn-back"
-                    >
-                        <ArrowRight size={18} />
-                        العودة لقائمة العملاء
+                {/* ── Sticky search + back bar ── */}
+                <div className="history-sticky-bar">
+                    <button onClick={() => setSelectedCustomerName(null)} className="btn-back">
+                        <ArrowRight size={18} /> قائمة العملاء
                     </button>
+                    <div className="sticky-search-wrap">
+                        <Search size={16} className="search-icon" />
+                        <input
+                            ref={searchRef}
+                            type="text"
+                            placeholder="ابحث برقم الفاتورة أو التاريخ..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="search-input sticky-search-input"
+                        />
+                        {searchQuery && (
+                            <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Customer name */}
+                <div className="customer-detail-header">
                     <div className="customer-info-title">
                         <h2>حسابات العميل: {selectedCustomer.customerName}</h2>
                         {selectedCustomer.phoneNumber && <p className="phone-subtitle">الهاتف: {selectedCustomer.phoneNumber}</p>}
                     </div>
                 </div>
 
-                {/* Customer Global Stats Summary */}
+                {/* Stats */}
                 {!isEmployee && (
                     <div className="customer-stats-summary">
-                        <div className="stat-card">
-                            <span className="stat-label">عدد الفواتير</span>
-                            <span className="stat-value">{selectedCustomer.ordersCount}</span>
-                        </div>
-                        <div className="stat-card">
-                            <span className="stat-label">إجمالي المطلوب</span>
-                            <span className="stat-value">{selectedCustomer.totalCost.toLocaleString()} ج.م</span>
-                        </div>
-                        <div className="stat-card text-green-card">
-                            <span className="stat-label">إجمالي المدفوع (عربون ودفعات)</span>
-                            <span className="stat-value">{selectedCustomer.totalDeposit.toLocaleString()} ج.م</span>
-                        </div>
-                        <div className="stat-card text-red-card">
-                            <span className="stat-label">إجمالي المتبقي</span>
-                            <span className="stat-value">{selectedCustomer.totalRemaining.toLocaleString()} ج.م</span>
-                        </div>
+                        <div className="stat-card"><span className="stat-label">عدد الفواتير</span><span className="stat-value">{selectedCustomer.ordersCount}</span></div>
+                        <div className="stat-card"><span className="stat-label">إجمالي المطلوب</span><span className="stat-value">{selectedCustomer.totalCost.toLocaleString()} ج.م</span></div>
+                        <div className="stat-card text-green-card"><span className="stat-label">إجمالي المدفوع</span><span className="stat-value">{selectedCustomer.totalDeposit.toLocaleString()} ج.م</span></div>
+                        <div className="stat-card text-red-card"><span className="stat-label">إجمالي المتبقي</span><span className="stat-value">{selectedCustomer.totalRemaining.toLocaleString()} ج.م</span></div>
                     </div>
                 )}
 
-                {/* سجل دفعات العميل */}
+                {/* Payment Log */}
                 {!isEmployee && paymentLog.length > 0 && (
                     <div className="payment-log">
                         <div className="payment-log-header">
@@ -284,18 +431,11 @@ export function History({ onViewChange }) {
                         </div>
                         <div className="payment-log-table-wrap">
                             <table className="payment-log-table">
-                                <thead>
-                                    <tr>
-                                        <th>التاريخ</th>
-                                        <th>الفاتورة</th>
-                                        <th>البيان</th>
-                                        <th>المبلغ</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>اليوم والتاريخ</th><th>الفاتورة</th><th>البيان</th><th>المبلغ</th></tr></thead>
                                 <tbody>
                                     {paymentLog.map(entry => (
                                         <tr key={entry.key}>
-                                            <td>{formatDate(entry.date)}</td>
+                                            <td>{formatDateFull(entry.date)}</td>
                                             <td>{entry.serial || '—'}</td>
                                             <td>{entry.note}</td>
                                             <td className="text-green payment-log-amount">{entry.amount.toLocaleString()} ج.م</td>
@@ -313,25 +453,41 @@ export function History({ onViewChange }) {
                     </div>
                 )}
 
-                <div className="customer-orders-header-row">
-                    <h3>تفاصيل الفواتير والمعاملات</h3>
-                    <div className="search-bar-inline">
-                        <Search size={16} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="بحث برقم الفاتورة أو التاريخ..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="search-input-small"
-                        />
+                {/* ── Multi-select toolbar ── */}
+                <div className="orders-toolbar">
+                    <h3>تفاصيل الفواتير ({sortedOrders.length})</h3>
+                    <div className="orders-toolbar-actions">
+                        {anySelected && (
+                            <>
+                                <span className="selection-count">{selectedOrderIds.size} محدد</span>
+                                <button
+                                    className="btn-multi-print"
+                                    onClick={() => handleMultiPrint(sortedOrders)}
+                                >
+                                    <Printer size={15} /> طباعة المحدد
+                                </button>
+                                <button className="btn-clear-selection" onClick={clearSelection}>
+                                    <XCircle size={15} /> إلغاء
+                                </button>
+                            </>
+                        )}
+                        <button
+                            className={`btn-select-all ${allSelected ? 'active' : ''}`}
+                            onClick={() => toggleSelectAll(sortedOrders)}
+                            title="تحديد الكل"
+                        >
+                            {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                            <span>{allSelected ? 'إلغاء الكل' : 'تحديد الكل'}</span>
+                        </button>
                     </div>
                 </div>
 
-                {/* Desktop View */}
+                {/* Desktop Table */}
                 <div className="history-table-wrapper">
                     <table className="history-table">
                         <thead>
                             <tr>
+                                <th style={{ width: 36 }}></th>
                                 <th>الفاتورة والتاريخ</th>
                                 <th>البيان والقياسات</th>
                                 <th>الصنف / الخامة</th>
@@ -351,44 +507,46 @@ export function History({ onViewChange }) {
                                 const serial = order.serialNumber || order.serial_number;
                                 const prevBalance = getPrevBalance(order);
                                 const otherAdjustments = (order.adjustments || []).filter(a => a.id !== PREV_BALANCE_ID);
+                                const isChecked = selectedOrderIds.has(order.id);
                                 return (
-                                    <tr key={order.id} className="tinted" style={{ '--tint-h': hueForSerial(serial, order.id) }}>
+                                    <tr
+                                        key={order.id}
+                                        className={`tinted ${isChecked ? 'row-selected' : ''}`}
+                                        style={{ '--tint-h': hueForSerial(serial, order.id) }}
+                                    >
+                                        <td className="select-cell" onClick={() => toggleSelect(order.id)}>
+                                            {isChecked
+                                                ? <CheckSquare size={18} className="check-icon checked" />
+                                                : <Square size={18} className="check-icon" />
+                                            }
+                                        </td>
                                         <td className="history-date">
                                             {serial && <div className="history-serial-pill">{serial}</div>}
+                                            <div className="date-day">{WEEKDAYS_AR[new Date(order.date).getDay()]}</div>
                                             <div>{new Date(order.date).toLocaleDateString('ar-EG')}</div>
                                             <div className="time-sub">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</div>
                                         </td>
                                         <td>
                                             <div className="history-items">
                                                 {order.items?.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        {item.isPiece ? (item.description || 'قطعة') : `${item.length}x${item.width}`} / {item.qty} {item.isAddLinear ? `(+ م.ط)` : ''}
-                                                    </div>
+                                                    <div key={idx}>{item.isPiece ? (item.description || 'قطعة') : `${item.length}x${item.width}`} / {item.qty} {item.isAddLinear ? `(+ م.ط)` : ''}</div>
                                                 ))}
                                             </div>
                                         </td>
                                         <td>
                                             <div className="history-items">
-                                                {order.items?.map((item, idx) => (
-                                                    <div key={idx}>
-                                                        {item.typeName}
-                                                    </div>
-                                                ))}
+                                                {order.items?.map((item, idx) => <div key={idx}>{item.typeName}</div>)}
                                             </div>
                                         </td>
                                         <td>
                                             <div className="price-breakdown">
                                                 <div className="final-price">{totalCost.toLocaleString()} ج.م</div>
-                                                {prevBalance > 0 && (
-                                                    <div className="prev-balance-row">منها حساب قديم: {prevBalance.toLocaleString()} ج.م</div>
-                                                )}
+                                                {prevBalance > 0 && <div className="prev-balance-row">منها حساب قديم: {prevBalance.toLocaleString()} ج.م</div>}
                                                 {otherAdjustments.length > 0 && (
                                                     <div className="adjustments-tooltip">
                                                         <span>الأساسي: {Number(baseCost || 0).toLocaleString()} ج.م</span>
                                                         {otherAdjustments.map((adj, idx) => (
-                                                            <span key={idx}>
-                                                                {adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م
-                                                            </span>
+                                                            <span key={idx}>{adj.name}: {adj.amount >= 0 ? '+' : ''}{adj.amount.toLocaleString()} ج.م</span>
                                                         ))}
                                                     </div>
                                                 )}
@@ -407,50 +565,15 @@ export function History({ onViewChange }) {
                                         </td>
                                         <td className="history-actions-cell">
                                             <div className="actions-flex">
-                                                <button
-                                                    onClick={() => setPrintSheetOrder(order)}
-                                                    className="btn-print-small"
-                                                    title="كشف الطباعة و PDF"
-                                                >
-                                                    <Printer size={16} />
-                                                </button>
+                                                <button onClick={() => setPrintSheetOrder(order)} className="btn-print-small" title="كشف الطباعة"><Printer size={16} /></button>
                                                 {rem > 0 ? (
-                                                    <button
-                                                        onClick={() => handleMarkPaid(order)}
-                                                        className="btn-paid-small"
-                                                        title="تم استلام المبلغ"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                    </button>
+                                                    <button onClick={() => handleMarkPaid(order)} className="btn-paid-small" title="تم استلام المبلغ"><CheckCircle size={16} /></button>
                                                 ) : (
-                                                    <span className="paid-badge">
-                                                        <CheckCircle size={14} /> تم الاستلام
-                                                    </span>
+                                                    <span className="paid-badge"><CheckCircle size={14} /> تم</span>
                                                 )}
-                                                <button
-                                                    onClick={() => handleEditOrder(order)}
-                                                    className="btn-edit-small"
-                                                    title="تعديل الفاتورة"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleSendWhatsApp(order)}
-                                                    className="btn-whatsapp-small"
-                                                    disabled={!phone}
-                                                    title={phone ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
-                                                >
-                                                    <MessageCircle size={16} />
-                                                </button>
-                                                {!isEmployee && (
-                                                    <button
-                                                        onClick={() => handleDeleteOrder(order.id)}
-                                                        className="btn-delete-small"
-                                                        title="حذف الفاتورة"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                )}
+                                                <button onClick={() => handleEditOrder(order)} className="btn-edit-small" title="تعديل"><Edit2 size={16} /></button>
+                                                <button onClick={() => handleSendWhatsApp(order)} className="btn-whatsapp-small" disabled={!phone} title={phone ? 'واتساب' : 'لا يوجد رقم'}><MessageCircle size={16} /></button>
+                                                {!isEmployee && <button onClick={() => handleDeleteOrder(order.id)} className="btn-delete-small" title="حذف"><Trash2 size={16} /></button>}
                                             </div>
                                         </td>
                                     </tr>
@@ -460,7 +583,7 @@ export function History({ onViewChange }) {
                     </table>
                 </div>
 
-                {/* Mobile View */}
+                {/* Mobile Cards */}
                 <div className="history-mobile-cards">
                     {sortedOrders.map((order) => {
                         const totalCost = Number(order.total_cost || order.totalCost || 0);
@@ -469,66 +592,41 @@ export function History({ onViewChange }) {
                             : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : (totalCost - dep));
                         const phone = order.customer_phone || order.phoneNumber;
                         const serial = order.serialNumber || order.serial_number;
+                        const isChecked = selectedOrderIds.has(order.id);
                         return (
-                            <div key={order.id} className="history-card tinted" style={{ '--tint-h': hueForSerial(serial, order.id) }}>
+                            <div key={order.id} className={`history-card tinted ${isChecked ? 'card-selected' : ''}`} style={{ '--tint-h': hueForSerial(serial, order.id) }}>
                                 <div className="history-card-header">
-                                    <div>
-                                        {serial && <span className="history-card-serial-badge">{serial}</span>}
-                                        <p className="history-card-date">
-                                            <span className="hc-date">{new Date(order.date).toLocaleDateString('ar-EG')}</span>
-                                            <span className="hc-sep">•</span>
-                                            <span className="hc-time">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </p>
+                                    <div className="card-header-left">
+                                        {/* Checkbox */}
+                                        <button className="card-select-btn" onClick={() => toggleSelect(order.id)} title="تحديد">
+                                            {isChecked
+                                                ? <CheckSquare size={20} className="check-icon checked" />
+                                                : <Square size={20} className="check-icon" />
+                                            }
+                                        </button>
+                                        <div>
+                                            {serial && <span className="history-card-serial-badge">{serial}</span>}
+                                            <p className="history-card-date">
+                                                <span className="hc-day">{WEEKDAYS_AR[new Date(order.date).getDay()]}</span>
+                                                <span className="hc-sep"> • </span>
+                                                <span className="hc-date">{new Date(order.date).toLocaleDateString('ar-EG')}</span>
+                                                <span className="hc-sep"> • </span>
+                                                <span className="hc-time">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="history-card-header-actions">
-                                        <div className="history-card-price">
-                                            {totalCost.toLocaleString()} ج.م
-                                        </div>
+                                        <div className="history-card-price">{totalCost.toLocaleString()} ج.م</div>
                                         <div className="actions-flex">
-                                            <button
-                                                onClick={() => setPrintSheetOrder(order)}
-                                                className="btn-print-card"
-                                                title="كشف الطباعة و PDF"
-                                            >
-                                                <Printer size={18} />
-                                            </button>
+                                            <button onClick={() => setPrintSheetOrder(order)} className="btn-print-card" title="كشف الطباعة"><Printer size={18} /></button>
                                             {rem > 0 ? (
-                                                <button
-                                                    onClick={() => handleMarkPaid(order)}
-                                                    className="btn-paid-card"
-                                                    title="تم استلام المبلغ"
-                                                >
-                                                    <CheckCircle size={18} />
-                                                </button>
+                                                <button onClick={() => handleMarkPaid(order)} className="btn-paid-card" title="تم استلام المبلغ"><CheckCircle size={18} /></button>
                                             ) : (
-                                                <span className="paid-badge">
-                                                    <CheckCircle size={14} /> تم الاستلام
-                                                </span>
+                                                <span className="paid-badge"><CheckCircle size={14} /> تم الاستلام</span>
                                             )}
-                                            <button
-                                                onClick={() => handleEditOrder(order)}
-                                                className="btn-edit-card"
-                                                title="تعديل الفاتورة"
-                                            >
-                                                <Edit2 size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleSendWhatsApp(order)}
-                                                className="btn-whatsapp-card"
-                                                disabled={!phone}
-                                                title={phone ? 'إرسال عبر واتساب' : 'لا يوجد رقم هاتف'}
-                                            >
-                                                <MessageCircle size={18} />
-                                            </button>
-                                            {!isEmployee && (
-                                                <button
-                                                    onClick={() => handleDeleteOrder(order.id)}
-                                                    className="btn-delete-card"
-                                                    title="حذف الفاتورة"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            )}
+                                            <button onClick={() => handleEditOrder(order)} className="btn-edit-card" title="تعديل"><Edit2 size={18} /></button>
+                                            <button onClick={() => handleSendWhatsApp(order)} className="btn-whatsapp-card" disabled={!phone} title={phone ? 'واتساب' : 'لا يوجد رقم'}><MessageCircle size={18} /></button>
+                                            {!isEmployee && <button onClick={() => handleDeleteOrder(order.id)} className="btn-delete-card" title="حذف"><Trash2 size={18} /></button>}
                                         </div>
                                     </div>
                                 </div>
@@ -537,14 +635,9 @@ export function History({ onViewChange }) {
                                     {order.items?.map((item, idx) => (
                                         <div key={idx} className="history-card-item">
                                             <span>{item.typeName}</span>
-                                            <span>
-                                                {item.isPiece ?
-                                                    (item.description || 'قطعة') :
-                                                    `${item.length}x${item.width}`} ({item.qty}) {item.isAddLinear ? `(+ م.ط)` : ''}
-                                            </span>
+                                            <span>{item.isPiece ? (item.description || 'قطعة') : `${item.length}x${item.width}`} ({item.qty}) {item.isAddLinear ? `(+ م.ط)` : ''}</span>
                                         </div>
                                     ))}
-
                                     {order.adjustments && order.adjustments.length > 0 && (
                                         <div className="history-card-adjustments">
                                             <div className="card-adj-header">الإضافات والخصومات:</div>
@@ -556,22 +649,15 @@ export function History({ onViewChange }) {
                                             ))}
                                         </div>
                                     )}
-
                                     <div className="history-card-payment-summary">
-                                        <div className="payment-row text-green">
-                                            <span>العربون المدفوع:</span>
-                                            <strong>{dep.toLocaleString()} ج.م</strong>
-                                        </div>
+                                        <div className="payment-row text-green"><span>العربون المدفوع:</span><strong>{dep.toLocaleString()} ج.م</strong></div>
                                         {getPayments(order).map((pay, i) => (
                                             <div key={pay.id || i} className="payment-row text-green">
                                                 <span className="lbl-colon">دفعة <span className="num-unit">{formatDate(pay.date)}</span></span>
                                                 <strong>{Number(pay.amount).toLocaleString()} ج.م</strong>
                                             </div>
                                         ))}
-                                        <div className="payment-row text-red">
-                                            <span>المتبقي المطلوب:</span>
-                                            <strong>{rem.toLocaleString()} ج.م</strong>
-                                        </div>
+                                        <div className="payment-row text-red"><span>المتبقي المطلوب:</span><strong>{rem.toLocaleString()} ج.م</strong></div>
                                     </div>
                                 </div>
                             </div>
@@ -579,7 +665,7 @@ export function History({ onViewChange }) {
                     })}
                 </div>
 
-                {/* Print Sheet Modal */}
+                {/* Single Print Modal */}
                 <PrintSheetModal
                     isOpen={!!printSheetOrder}
                     onClose={() => setPrintSheetOrder(null)}
@@ -597,31 +683,47 @@ export function History({ onViewChange }) {
                     payments={printSheetOrder ? getPayments(printSheetOrder) : []}
                     printSettings={printSettings}
                 />
+
+                {/* Multi Print Modal */}
+                {multiPrintOrders && (
+                    <MultiPrintModal
+                        orders={multiPrintOrders}
+                        onClose={() => setMultiPrintOrders(null)}
+                        printSettings={printSettings}
+                    />
+                )}
             </div>
         );
     }
 
-    // 2. Render Customers Registry List View
+    /* ══════════════════════════════════════════════════
+       Customers List View (main view)
+    ══════════════════════════════════════════════════ */
     return (
         <div className="history-container">
-            <h2>سجل معاملات العملاء</h2>
-
-            {/* Search Bar */}
-            <div className="search-bar-container">
-                <Search size={18} className="search-icon" />
-                <input
-                    type="text"
-                    placeholder="ابحث باسم العميل، الهاتف، أو رقم الفاتورة (مثال: #INV-1001)..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="search-input"
-                />
+            {/* ── Sticky search bar ── */}
+            <div className="history-sticky-bar">
+                <h2 className="history-title-inline">سجل معاملات العملاء</h2>
+                <div className="sticky-search-wrap">
+                    <Search size={16} className="search-icon" />
+                    <input
+                        ref={searchRef}
+                        type="text"
+                        placeholder="ابحث باسم العميل، الهاتف، أو رقم الفاتورة..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="search-input sticky-search-input"
+                    />
+                    {searchQuery && (
+                        <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {groupedCustomers.length === 0 ? (
-                <div className="history-empty">
-                    <p>لا يوجد عملاء يطابقون بحثك.</p>
-                </div>
+                <div className="history-empty"><p>لا يوجد عملاء يطابقون بحثك.</p></div>
             ) : (
                 <div className="customers-grid">
                     {groupedCustomers.map((customer) => {
@@ -633,9 +735,7 @@ export function History({ onViewChange }) {
                                 onClick={() => setSelectedCustomerName(customer.customerName)}
                             >
                                 <div className="card-top">
-                                    <div className="user-icon-wrapper">
-                                        <User size={20} />
-                                    </div>
+                                    <div className="user-icon-wrapper"><User size={20} /></div>
                                     <div className="customer-info">
                                         <h3>{customer.customerName}</h3>
                                         <span className="badge-fats">
@@ -643,19 +743,11 @@ export function History({ onViewChange }) {
                                         </span>
                                     </div>
                                 </div>
-
                                 <div className="card-financials">
-                                    <div className="financial-item">
-                                        <span>إجمالي الحساب:</span>
-                                        <strong>{customer.totalCost.toLocaleString()} ج.م</strong>
-                                    </div>
-                                    <div className="financial-item text-green">
-                                        <span>إجمالي المدفوع:</span>
-                                        <strong>{customer.totalDeposit.toLocaleString()} ج.م</strong>
-                                    </div>
+                                    <div className="financial-item"><span>إجمالي الحساب:</span><strong>{customer.totalCost.toLocaleString()} ج.م</strong></div>
+                                    <div className="financial-item text-green"><span>إجمالي المدفوع:</span><strong>{customer.totalDeposit.toLocaleString()} ج.م</strong></div>
                                     <div className={`financial-item ${hasRemaining ? 'text-red highlight-remaining' : 'text-green'}`}>
-                                        <span>المتبقي للاستلام:</span>
-                                        <strong>{customer.totalRemaining.toLocaleString()} ج.م</strong>
+                                        <span>المتبقي للاستلام:</span><strong>{customer.totalRemaining.toLocaleString()} ج.م</strong>
                                     </div>
                                 </div>
                             </div>
