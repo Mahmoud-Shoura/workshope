@@ -94,10 +94,11 @@ export function PrintSheetModal({
         return acc;
     }, {}));
 
+    const WEEKDAYS_AR = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const workshopName = printSettings?.workshop_name || 'ورشة العمل الحديثة';
-    const formattedDate = orderDate
-        ? new Date(orderDate).toLocaleDateString('ar-EG')
-        : new Date().toLocaleDateString('ar-EG');
+    const targetDate = orderDate ? new Date(orderDate) : new Date();
+    const dayName = WEEKDAYS_AR[targetDate.getDay()];
+    const formattedDate = targetDate.toLocaleDateString('ar-EG');
 
     const payDate = (d) => (d ? new Date(d).toLocaleDateString('ar-EG') : '');
 
@@ -196,7 +197,7 @@ export function PrintSheetModal({
                         <div className="ps-doc-title">
                             <h2>{workshopName}</h2>
                             <div className="ps-meta-line">
-                                <span><span className="ps-lbl">التاريخ</span> <bdi dir="ltr">{formattedDate}</bdi></span>
+                                <span><span className="ps-lbl">التاريخ</span> <strong>{dayName}</strong> <bdi dir="ltr">{formattedDate}</bdi></span>
                                 {printSettings?.phone && (
                                     <span className="ps-meta-phone">
                                         <span className="ps-lbl">تليفون</span> <bdi dir="ltr">{printSettings.phone}</bdi>
@@ -388,7 +389,7 @@ export function PrintSheetModal({
                         <div className="ps-rc-sep" />
 
                         <div className="ps-rc-row"><span className="ps-lbl">فاتورة رقم</span><strong>{serialNumber}</strong></div>
-                        <div className="ps-rc-row"><span className="ps-lbl">التاريخ</span><bdi dir="ltr">{formattedDate}</bdi></div>
+                        <div className="ps-rc-row"><span className="ps-lbl">التاريخ</span><span><strong>{dayName}</strong> <bdi dir="ltr">{formattedDate}</bdi></span></div>
                         <div className="ps-rc-row"><span className="ps-lbl">العميل</span><strong>{customerName || 'عميل نقدي'}</strong></div>
 
                         <div className="ps-rc-sep" />

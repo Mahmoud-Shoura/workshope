@@ -4,6 +4,8 @@ import { Calculator } from './components/Calculator/Calculator';
 import { GlassTypeManager } from './components/GlassTypeManager/GlassTypeManager';
 import { History } from './components/History/History';
 import { Settings } from './components/Settings/Settings';
+import { Dashboard } from './components/Dashboard/Dashboard';
+import { TodoLog } from './components/TodoLog/TodoLog';
 import { ThemeProvider } from './components/ThemeProvider/ThemeProvider';
 import { LoginPage } from './components/LoginPage/LoginPage';
 import { LandingPage } from './components/LandingPage/LandingPage';
@@ -26,9 +28,11 @@ function AppContent() {
     }
   }, [currentUser]);
 
+  const VALID_VIEWS = ['dashboard', 'calculator', 'inventory', 'history', 'todos', 'settings'];
+
   const getInitialView = () => {
     const hash = window.location.hash.replace('#', '');
-    return ['calculator', 'inventory', 'history', 'settings'].includes(hash) ? hash : 'calculator';
+    return VALID_VIEWS.includes(hash) ? hash : 'calculator';
   };
 
   const [currentView, setCurrentView] = useState(getInitialView);
@@ -36,7 +40,7 @@ function AppContent() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['calculator', 'inventory', 'history', 'settings'].includes(hash)) {
+      if (VALID_VIEWS.includes(hash)) {
         setCurrentView(hash);
       } else if (!hash) {
         setCurrentView('calculator');
@@ -89,9 +93,11 @@ function AppContent() {
 
   return (
     <Layout currentView={currentView} onViewChange={handleViewChange}>
+      {currentView === 'dashboard' && <Dashboard onViewChange={handleViewChange} />}
       {currentView === 'calculator' && <Calculator />}
       {currentView === 'inventory' && <GlassTypeManager />}
       {currentView === 'history' && <History onViewChange={handleViewChange} />}
+      {currentView === 'todos' && <TodoLog onViewChange={handleViewChange} />}
       {currentView === 'settings' && <Settings />}
     </Layout>
   );

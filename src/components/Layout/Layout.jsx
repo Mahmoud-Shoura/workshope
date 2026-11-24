@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut, Settings } from 'lucide-react';
+import { LayoutDashboard, Calculator, Menu, History, Moon, Sun, LogOut, Settings, BarChart3, CheckSquare } from 'lucide-react';
 import { useTheme } from '../ThemeProvider/ThemeProvider';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import './Layout.css';
@@ -68,6 +68,14 @@ export function Layout({ children, currentView, onViewChange }) {
                 </div>
                 <div className="layout-sidebar-nav">
                     <NavItem
+                        view="dashboard"
+                        icon={BarChart3}
+                        label="لوحة الإحصائيات"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
+                    />
+                    <NavItem
                         view="calculator"
                         icon={Calculator}
                         label="الحاسبة"
@@ -87,6 +95,14 @@ export function Layout({ children, currentView, onViewChange }) {
                         view="history"
                         icon={History}
                         label="السجل"
+                        currentView={currentView}
+                        onViewChange={onViewChange}
+                        setSidebarOpen={setSidebarOpen}
+                    />
+                    <NavItem
+                        view="todos"
+                        icon={CheckSquare}
+                        label="سجل المهام"
                         currentView={currentView}
                         onViewChange={onViewChange}
                         setSidebarOpen={setSidebarOpen}
