@@ -78,7 +78,7 @@
     flex-direction: column;
     min-width: 0;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 .layout-mobile-header {
@@ -151,7 +151,7 @@
     }
 
     .layout-content {
-        padding: 15px;
+        padding: 72px 15px 15px 15px;
     }
 }
 

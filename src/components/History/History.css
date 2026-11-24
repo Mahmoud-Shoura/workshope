@@ -721,7 +721,7 @@
 .history-sticky-bar {
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 40;
     background-color: var(--bg-color);
     padding: 10px 0 10px 0;
     margin-bottom: 12px;
@@ -1196,7 +1196,8 @@
 ════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
     .history-sticky-bar {
-        top: 0;
+        top: 60px;
+        z-index: 40;
         padding: 8px 0;
         gap: 8px;
     }

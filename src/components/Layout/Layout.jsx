@@ -151,9 +151,11 @@ export function Layout({ children, currentView, onViewChange }) {
                         <Menu size={24} />
                     </button>
                     <span>
+                        {currentView === 'dashboard' && 'لوحة الإحصائيات'}
                         {currentView === 'calculator' && 'الحاسبة'}
                         {currentView === 'inventory' && 'المخزن'}
                         {currentView === 'history' && 'السجل'}
+                        {currentView === 'todos' && 'سجل المهام'}
                         {currentView === 'settings' && 'الإعدادات'}
                     </span>
                 </header>
