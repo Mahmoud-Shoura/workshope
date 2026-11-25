@@ -409,3 +409,137 @@
         gap: 10px;
     }
 }
+
+/* ═════════ زرار إضافة مجموعة: على الموبايل زرار + عايم تحت شمال ═════════ */
+@media (max-width: 768px) {
+    .calculator-container {
+        padding-bottom: 100px;
+        /* مساحة عشان الزرار العايم ما يغطيش آخر الصفحة */
+    }
+
+    .calculator-footer .btn-add-row {
+        position: fixed;
+        left: 18px;
+        bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        z-index: 90;
+        width: 58px;
+        height: 58px;
+        padding: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .calculator-footer .btn-add-row svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    .calculator-footer .btn-add-row .btn-add-row-label {
+        display: none;
+    }
+
+    .calculator-footer .btn-add-row:hover {
+        transform: none;
+    }
+
+    .calculator-footer .btn-add-row:active {
+        transform: scale(0.93);
+    }
+}
+
+/* ═════════ حساب العميل الإجمالي من السجل (أسفل إجماليات الفاتورة) ═════════ */
+.customer-account-box {
+    flex: 1 1 100%;
+    margin-top: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-right: 4px solid #1565c0;
+    border-radius: 8px;
+    background-color: var(--table-header-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.customer-account-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.customer-account-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.customer-account-count {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-color);
+}
+
+.customer-account-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.customer-account-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+}
+
+.customer-account-item span {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.customer-account-item strong {
+    font-size: 15px;
+}
+
+.customer-account-paid {
+    color: #2e7d32;
+}
+
+.customer-account-due {
+    color: #c62828;
+}
+
+.customer-account-grand {
+    border-color: #1565c0;
+}
+
+.customer-account-grand strong {
+    font-size: 17px;
+    color: #1565c0;
+}
+
+.dark .customer-account-grand strong,
+[data-theme='dark'] .customer-account-grand strong {
+    color: #64b5f6;
+}
+
+.customer-account-hint {
+    margin: 0;
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+@media (max-width: 520px) {
+    .customer-account-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

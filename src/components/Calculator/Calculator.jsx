@@ -228,6 +228,29 @@ export function Calculator() {
         return Object.entries(map).map(([name, phone]) => ({ name, phone }));
     }, [orders]);
 
+    // ── حساب العميل الإجمالي من السجل (من غير الفاتورة اللي بتتعمل/بتتعدل دلوقتي) ──
+    const customerHistory = React.useMemo(() => {
+        const name = customerName.trim();
+        if (!name || !orders) return null;
+        const list = orders.filter(o => {
+            const sameCustomer = (o.customer_name || o.customerName || '').trim() === name;
+            const serial = o.serialNumber || o.serial_number || '';
+            return sameCustomer && serial !== invoiceSerial;
+        });
+        if (!list.length) return null;
+        let total = 0;
+        let remaining = 0;
+        list.forEach(o => {
+            const t = Number(o.total_cost || o.totalCost || 0);
+            const dep = Number(o.deposit || 0);
+            const rem = o.remaining_balance !== undefined ? Number(o.remaining_balance)
+                : (o.remainingBalance !== undefined ? Number(o.remainingBalance) : (t - dep));
+            total += t;
+            remaining += rem;
+        });
+        return { count: list.length, total, paid: total - remaining, remaining };
+    }, [orders, customerName, invoiceSerial]);
+
     const [nameSuggestions, setNameSuggestions] = useState([]);
     const [showNameSuggestions, setShowNameSuggestions] = useState(false);
     const nameInputRef = useRef(null);
@@ -677,6 +700,11 @@ export function Calculator() {
 
     // المتبقي = الإجمالي (بالحساب القديم) - العربون - كل الدفعات المستلمة
     const remainingAmount = Math.max(0, totalCostWithAdjustments - Number(deposit || 0) - paidTotalValue);
+
+    // إجمالي المستحق على العميل = متبقي السجل + متبقي الفاتورة دي
+    // (الحساب القديم المكتوب في الفاتورة بيتخصم من متبقي السجل عشان ما يتحسبش مرتين)
+    const historyRemaining = customerHistory ? customerHistory.remaining : 0;
+    const customerGrandRemaining = remainingAmount + Math.max(0, historyRemaining - previousBalanceAmount);
 
     // الدفعات بتواريخها (للطباعة)
     const paymentsForPrint = [
@@ -1447,9 +1475,9 @@ export function Calculator() {
 
             {/* Bottom Actions */}
             <div className="calculator-footer no-print">
-                <button onClick={addGroup} className="btn-add-row">
+                <button onClick={addGroup} className="btn-add-row" title="إضافة مجموعة جديدة" aria-label="إضافة مجموعة جديدة">
                     <Plus size={16} />
-                    إضافة مجموعة جديدة
+                    <span className="btn-add-row-label">إضافة مجموعة جديدة</span>
                 </button>
 
                 <div className="calculator-totals">
@@ -1488,6 +1516,38 @@ export function Calculator() {
                         <span className="total-value font-bold text-red" style={{ color: '#c62828', fontWeight: 'bold' }}>{remainingAmount.toFixed(2)} ج.م</span>
                     </div>
                 </div>
+
+                {/* حساب العميل الإجمالي من السجل */}
+                {customerHistory && (
+                    <div className="customer-account-box">
+                        <div className="customer-account-header">
+                            <span className="customer-account-title">حساب العميل في السجل</span>
+                            <span className="customer-account-count">{customerHistory.count} فاتورة سابقة</span>
+                        </div>
+                        <div className="customer-account-grid">
+                            <div className="customer-account-item">
+                                <span>إجمالي حساباته</span>
+                                <strong>{customerHistory.total.toFixed(2)} ج.م</strong>
+                            </div>
+                            <div className="customer-account-item">
+                                <span>إجمالي المدفوع</span>
+                                <strong className="customer-account-paid">{customerHistory.paid.toFixed(2)} ج.م</strong>
+                            </div>
+                            <div className="customer-account-item">
+                                <span>المتبقي عليه في السجل</span>
+                                <strong className="customer-account-due">{customerHistory.remaining.toFixed(2)} ج.م</strong>
+                            </div>
+                            <div className="customer-account-item customer-account-grand">
+                                <span>إجمالي المستحق على العميل</span>
+                                <strong>{customerGrandRemaining.toFixed(2)} ج.م</strong>
+                            </div>
+                        </div>
+                        <p className="customer-account-hint">
+                            إجمالي المستحق = متبقي السجل + المتبقي من الفاتورة دي
+                            {previousBalanceAmount > 0 ? '، من غير تكرار الحساب القديم المكتوب' : ''}.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Printable Sheet Overlay Modal */}

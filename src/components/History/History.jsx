@@ -189,8 +189,32 @@ export function History({ onViewChange }) {
     // Multi-select state
     const [selectedOrderIds, setSelectedOrderIds] = useState(new Set());
     const [multiPrintOrders, setMultiPrintOrders] = useState(null);
+    const [showSearchBar, setShowSearchBar] = useState(true);
 
     const searchRef = useRef(null);
+    const lastScrollY = useRef(0);
+
+    // إخفاء شريط البحث عند النزول وإظهاره عند الصعود (في قائمة العملاء فقط)
+    useEffect(() => {
+        if (selectedCustomerName) return undefined;
+        lastScrollY.current = window.scrollY || window.pageYOffset || 0;
+        setShowSearchBar(true);
+
+        const handleScroll = () => {
+            const currentY = window.scrollY || window.pageYOffset || 0;
+            if (currentY <= 40 || searchQuery.trim()) {
+                setShowSearchBar(true);
+            } else if (currentY > lastScrollY.current + 8) {
+                setShowSearchBar(false);
+            } else if (currentY < lastScrollY.current - 8) {
+                setShowSearchBar(true);
+            }
+            lastScrollY.current = currentY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [selectedCustomerName, searchQuery]);
 
     const formatPhone = (raw) => {
         if (!raw) return null;
@@ -356,13 +380,7 @@ export function History({ onViewChange }) {
     ══════════════════════════════════════════════════ */
     if (selectedCustomer) {
         const allCustomerOrders = [...selectedCustomer.orders].sort((a, b) => new Date(b.date) - new Date(a.date));
-        const q = searchQuery.trim().toLowerCase();
-        const sortedOrders = allCustomerOrders.filter(o => {
-            if (!q) return true;
-            const serial = (o.serialNumber || o.serial_number || '').toLowerCase();
-            const date = new Date(o.date).toLocaleDateString('ar-EG');
-            return serial.includes(q) || date.includes(q);
-        });
+        const sortedOrders = allCustomerOrders;
 
         const paymentLog = allCustomerOrders.flatMap(order => {
             const serial = order.serialNumber || order.serial_number || '';
@@ -381,31 +399,12 @@ export function History({ onViewChange }) {
 
         return (
             <div className="history-container">
-                {/* ── Sticky search + back bar ── */}
-                <div className="history-sticky-bar">
-                    <button onClick={() => setSelectedCustomerName(null)} className="btn-back">
-                        <ArrowRight size={18} /> قائمة العملاء
-                    </button>
-                    <div className="sticky-search-wrap">
-                        <Search size={16} className="search-icon" />
-                        <input
-                            ref={searchRef}
-                            type="text"
-                            placeholder="ابحث برقم الفاتورة أو التاريخ..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="search-input sticky-search-input"
-                        />
-                        {searchQuery && (
-                            <button className="search-clear-btn" onClick={() => setSearchQuery('')}>
-                                <X size={14} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Customer name */}
+                {/* Customer header + back button (بدون شريط بحث) */}
                 <div className="customer-detail-header">
+                    <button onClick={() => setSelectedCustomerName(null)} className="btn-back">
+                        <ArrowRight size={18} />
+                        العودة لقائمة العملاء
+                    </button>
                     <div className="customer-info-title">
                         <h2>حسابات العميل: {selectedCustomer.customerName}</h2>
                         {selectedCustomer.phoneNumber && <p className="phone-subtitle">الهاتف: {selectedCustomer.phoneNumber}</p>}
@@ -701,8 +700,8 @@ export function History({ onViewChange }) {
     ══════════════════════════════════════════════════ */
     return (
         <div className="history-container">
-            {/* ── Sticky search bar ── */}
-            <div className="history-sticky-bar">
+            {/* ── Sticky search bar (يختفي عند النزول ويظهر عند الصعود) ── */}
+            <div className={`history-sticky-bar ${!showSearchBar ? 'hidden-on-scroll' : ''}`}>
                 <h2 className="history-title-inline">سجل معاملات العملاء</h2>
                 <div className="sticky-search-wrap">
                     <Search size={16} className="search-icon" />
