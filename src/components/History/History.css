@@ -848,6 +848,25 @@
     border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
+.btn-multi-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-multi-whatsapp:hover {
+    background: #1db954;
+}
+
 .btn-multi-print {
     display: inline-flex;
     align-items: center;
@@ -1290,42 +1309,53 @@
    Print CSS for multi-print
 ════════════════════════════════════════════════════ */
 @media print {
-    body>*:not(.multi-print-overlay):not(.ps-overlay) {
+    body:has(> .multi-print-overlay) > *:not(.multi-print-overlay) {
         display: none !important;
     }
 
     .multi-print-overlay,
-    .ps-overlay {
+    .multi-print-overlay * {
+        visibility: visible !important;
+    }
+
+    .multi-print-overlay {
         position: static !important;
+        inset: auto !important;
         background: transparent !important;
         padding: 0 !important;
         display: block !important;
+        overflow: visible !important;
+        height: auto !important;
     }
 
-    .multi-print-modal,
-    .ps-modal {
+    .multi-print-modal {
         max-width: 100% !important;
         max-height: none !important;
         box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
         overflow: visible !important;
+        display: block !important;
     }
 
     .multi-print-body {
         background: white !important;
         padding: 0 !important;
         gap: 0 !important;
+        overflow: visible !important;
+        display: block !important;
     }
 
     .multi-print-page {
         box-shadow: none !important;
         border-radius: 0 !important;
         padding: 10mm 12mm !important;
+        break-inside: avoid;
     }
 
     .page-break-before {
         page-break-before: always !important;
+        break-before: page !important;
     }
 
     .mp-info-grid {
@@ -1381,6 +1411,7 @@
         width: 100%;
     }
 
+    .btn-multi-whatsapp,
     .btn-multi-print,
     .btn-select-all,
     .btn-clear-selection {

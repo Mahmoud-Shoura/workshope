@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
     MessageCircle, ArrowRight, Trash2, Search, User, Phone,
-    Edit2, CheckCircle, Printer, Square, CheckSquare, XCircle, X
+    Edit2, CheckCircle, Printer, Square, CheckSquare, XCircle, X, Loader2
 } from 'lucide-react';
 import { useGlassStore } from '../../hooks/useGlassStore';
 import { PrintSheetModal } from '../PrintSheet/PrintSheetModal';
+import { shareInvoicePdf } from '../../utils/pdfShare';
 import { hueForSerial } from '../../utils/tint';
 import '../../utils/tint.css';
 import './History.css';
@@ -37,11 +39,46 @@ const getPrevBalance = (order) => {
    Multi-Invoice Print Modal — يطبع فواتير محددة معاً
 ───────────────────────────────────────────────────── */
 function MultiPrintModal({ orders, onClose, printSettings }) {
+    const bodyRef = useRef(null);
+    const [isSharingPdf, setIsSharingPdf] = useState(false);
+
     if (!orders || orders.length === 0) return null;
 
     const handlePrint = () => window.print();
 
-    return (
+    const handleSharePdf = async () => {
+        if (!bodyRef.current) return;
+        setIsSharingPdf(true);
+        const firstOrder = orders[0];
+        const customerName = firstOrder?.customer_name || firstOrder?.customerName || 'عميل';
+        const phoneNumber = firstOrder?.customer_phone || firstOrder?.phoneNumber || '';
+        const serials = orders.map(o => o.serialNumber || o.serial_number).filter(Boolean).join('_');
+
+        const clone = bodyRef.current.cloneNode(true);
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:fixed;top:0;left:0;width:794px;background:#fff;z-index:-1;pointer-events:none;padding:0;';
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
+
+        try {
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            await shareInvoicePdf({
+                element: clone,
+                customerName,
+                phoneNumber,
+                serialNumber: serials || `${orders.length}_فواتير`,
+                workshopName: printSettings?.workshop_name || 'الورشة'
+            });
+        } catch (err) {
+            console.error('Multi share PDF error:', err);
+            alert('حدث خطأ أثناء مشاركة الفواتير PDF: ' + err.message);
+        } finally {
+            if (wrapper.parentNode) document.body.removeChild(wrapper);
+            setIsSharingPdf(false);
+        }
+    };
+
+    return createPortal(
         <div className="multi-print-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
             <div className="multi-print-modal">
                 {/* Header */}
@@ -50,15 +87,27 @@ function MultiPrintModal({ orders, onClose, printSettings }) {
                         <span>طباعة {orders.length} فاتورة</span>
                     </div>
                     <div className="multi-print-actions">
-                        <button className="ps-btn ps-btn-print" onClick={handlePrint}>
+                        <button
+                            type="button"
+                            className="ps-btn ps-btn-wa"
+                            onClick={handleSharePdf}
+                            disabled={isSharingPdf}
+                            title="إرسال الفواتير المحددة PDF على واتساب"
+                        >
+                            {isSharingPdf
+                                ? <><Loader2 size={15} className="spin-icon" /><span>جاري تجهيز PDF...</span></>
+                                : <><MessageCircle size={15} /><span>PDF على واتساب</span></>
+                            }
+                        </button>
+                        <button type="button" className="ps-btn ps-btn-print" onClick={handlePrint}>
                             <Printer size={15} /> طباعة الكل
                         </button>
-                        <button className="ps-btn-close" onClick={onClose}><X size={18} /></button>
+                        <button type="button" className="ps-btn-close" onClick={onClose}><X size={18} /></button>
                     </div>
                 </div>
 
                 {/* Pages */}
-                <div className="multi-print-body">
+                <div className="multi-print-body" ref={bodyRef}>
                     {orders.map((order, pageIdx) => {
                         const workshopName = printSettings?.workshop_name || 'ورشة العمل الحديثة';
                         const customerName = order.customer_name || order.customerName || 'عميل نقدي';
@@ -172,7 +221,8 @@ function MultiPrintModal({ orders, onClose, printSettings }) {
                     })}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -317,6 +367,62 @@ export function History({ onViewChange }) {
         setMultiPrintOrders(toPrint);
     };
 
+    const handleMultiWhatsApp = (ordersList, fallbackPhone) => {
+        const selected = ordersList.filter(o => selectedOrderIds.has(o.id));
+        if (selected.length === 0) { alert('اختار فاتورة واحدة على الأقل'); return; }
+        if (selected.length === 1) {
+            handleSendWhatsApp(selected[0]);
+            return;
+        }
+
+        const workshopName = printSettings?.workshop_name || 'الورشة الحديثة';
+        const customerName = selected[0]?.customer_name || selected[0]?.customerName || 'عميل';
+        const rawPhone = selected.map(o => o.customer_phone || o.phoneNumber).find(Boolean) || fallbackPhone;
+        const phone = formatPhone(rawPhone);
+
+        let grandTotal = 0;
+        let grandPaid = 0;
+        let grandRemaining = 0;
+
+        let msg = `*كشف حساب مجمّع - ${customerName}* (${workshopName})\n`;
+        msg += `عدد الفواتير: ${selected.length}\n`;
+        msg += `━━━━━━━━━━━━━━━━\n\n`;
+
+        selected.forEach((order, idx) => {
+            const serial = order.serialNumber || order.serial_number || `#${idx + 1}`;
+            const total = Number(order.total_cost || order.totalCost || 0);
+            const dep = Number(order.deposit || 0);
+            const rem = order.remaining_balance !== undefined
+                ? Number(order.remaining_balance)
+                : (order.remainingBalance !== undefined ? Number(order.remainingBalance) : Math.max(0, total - dep));
+            const paid = Math.max(0, total - rem);
+
+            grandTotal += total;
+            grandPaid += paid;
+            grandRemaining += rem;
+
+            msg += `📄 *فاتورة ${serial}* (${formatDateFull(order.date)})\n`;
+            (order.items || []).forEach((item, i) => {
+                const desc = item.isPiece
+                    ? `${item.description || 'قطعة'} (${item.qty})`
+                    : `${item.length}×${item.width} (${item.qty})`;
+                msg += `  ${i + 1}. ${item.typeName}: ${desc} — ${Number(item.cost || 0).toFixed(2)} ج.م\n`;
+            });
+            msg += `  • الإجمالي: ${total.toFixed(2)} ج.م | المدفوع: ${paid.toFixed(2)} ج.م | المتبقي: ${rem.toFixed(2)} ج.م\n\n`;
+        });
+
+        msg += `━━━━━━━━━━━━━━━━\n`;
+        msg += `*الإجمالي الكلي:* ${grandTotal.toFixed(2)} ج.م\n`;
+        msg += `*إجمالي المدفوع:* ${grandPaid.toFixed(2)} ج.م\n`;
+        msg += `*إجمالي المتبقي:* ${grandRemaining.toFixed(2)} ج.م\n`;
+        msg += `_${printSettings?.footer_note || `شكراً لتعاملكم معنا - ${workshopName}`}_`;
+
+        const waUrl = phone
+            ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+            : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, '_blank');
+    };
+
     const clearSelection = () => setSelectedOrderIds(new Set());
 
     // ── Customer groups ──
@@ -459,6 +565,13 @@ export function History({ onViewChange }) {
                         {anySelected && (
                             <>
                                 <span className="selection-count">{selectedOrderIds.size} محدد</span>
+                                <button
+                                    className="btn-multi-whatsapp"
+                                    onClick={() => handleMultiWhatsApp(sortedOrders, selectedCustomer.phoneNumber)}
+                                    title="إرسال الفواتير المحددة على واتساب"
+                                >
+                                    <MessageCircle size={15} /> واتساب
+                                </button>
                                 <button
                                     className="btn-multi-print"
                                     onClick={() => handleMultiPrint(sortedOrders)}
